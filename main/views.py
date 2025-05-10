@@ -279,6 +279,13 @@ from django.conf import settings
 #         except Exception as e:
 #             return Response({"error": str(e)}, status=500)
 
+
+import requests
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.conf import settings
+
 class OpenRouterProxyView(APIView):
     permission_classes = [AllowAny]
 
@@ -287,19 +294,15 @@ class OpenRouterProxyView(APIView):
         if not prompt:
             return Response({"error": "Missing prompt"}, status=400)
 
-        api_key = settings.OPENROUTER_API_KEY
-        if not api_key:
-            return Response({"error": "API key missing from env"}, status=500)
-
         headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://frontend-eight-rho-95.vercel.app",
             "X-Title": "TradeGPT Chat"
         }
 
         payload = {
-            "model": "deepseek/deepseek-chat:free",
+            "model": "deepseek/deepseek-chat-v3-0324:free",  # ✅ new correct model
             "messages": [{"role": "user", "content": prompt}]
         }
 
