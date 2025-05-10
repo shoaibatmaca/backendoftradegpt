@@ -19,9 +19,9 @@ from decouple import config
 
 
 
-import os
 
-load_dotenv()  # <-- make sure it's loaded first
+
+ 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,8 +31,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+load_dotenv()
 SECRET_KEY = 'django-insecure-bem=k9wq048u*_&banzp#nh)ttudt+r8l=u5715fuw^hsf4_9#'
-
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 
