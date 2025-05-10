@@ -50,18 +50,21 @@ from .utils import get_user_from_token
 from datetime import datetime
 from django.utils.timezone import now
 import uuid
-
 class StartChatSessionView(APIView):
+    def get(self, request):
+        return Response({"detail": "GET not allowed."}, status=405)
+
     def post(self, request):
         token = request.GET.get("token")
         user = get_user_from_token(token)
-        
+
         session = ChatSession.objects.create(
             session_id=uuid.uuid4(),
             user_id=user["user_id"],
             username=user["username"],
         )
         return Response({"session_id": session.session_id})
+
 
 
 class MessageListCreateView(APIView):
