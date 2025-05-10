@@ -27,7 +27,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-bem=k9wq048u*_&banzp#nh)ttudt+r8l=u5715fuw^hsf4_9#'
 
-OPENROUTER_API_KEY = os.getenv("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")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
