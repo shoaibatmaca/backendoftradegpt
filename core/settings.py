@@ -17,6 +17,12 @@ from dotenv import load_dotenv
 import dj_database_url
 from decouple import config
 
+
+
+import os
+
+load_dotenv()  # <-- make sure it's loaded first
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -65,7 +71,7 @@ MIDDLEWARE = [
 ]
 
 
-load_dotenv()
+
 
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
