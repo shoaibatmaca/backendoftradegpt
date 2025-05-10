@@ -243,3 +243,39 @@ class DailyMessageLimitView(APIView):
         }.get(user["subscription_status"], 3)
 
         return Response({"count": count, "max": max_allowed})
+
+
+
+
+# views.py
+import requests
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.conf import settings
+
+class OpenRouterProxyView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        prompt = request.data.get("prompt")
+        if not prompt:
+            return Response({"error": "Missing prompt"}, status=400)
+
+        headers = {
+            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",  # safer in env
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://frontend-eight-rho-95.vercel.app",  # your frontend URL
+            "X-Title": "TradeGPT Chat"
+        }
+
+        payload = {
+            "model": "deepseek/deepseek-chat:free",
+            "messages": [{"role": "user", "content": prompt}]
+        }
+
+        try:
+            res = requests.post("https://openrouter.ai/api/v1/chat/completions", json=payload, headers=headers)
+            return Response(res.json(), status=res.status_code)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
