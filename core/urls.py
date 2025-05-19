@@ -24,6 +24,9 @@ urlpatterns = [
     path("chat/sessions/<uuid:session_id>/messages/", MessageListCreateView.as_view()),
     path("chat/user-sessions/", UserChatSessionsView.as_view()),
     path("chat/message-limit/", DailyMessageLimitView.as_view()),
+    
     path("proxy/openrouter/", OpenRouterProxyView.as_view()),
     path("chat/user/", TradeGPTUserView.as_view())
+
 ]
+
