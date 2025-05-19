@@ -185,7 +185,7 @@ class OpenRouterProxyView(APIView):
 
         try:
             res = requests.post(
-                "http://localhost:11434/api/chat",  # ✅ LOCAL OLLAMA
+            "https://6e07-39-49-168-243.ngrok-free.app/api/chat",
                 json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=60
