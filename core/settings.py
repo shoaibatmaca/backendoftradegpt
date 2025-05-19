@@ -41,7 +41,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "*",
-    "valourwealthdjango-production.up.railway.app"
+    "valourwealthdjango-production.up.railway.app",
+    "https://frontend-eight-rho-95.vercel.app", 
 ]
 
 # Application definition
@@ -145,7 +146,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://192.168.1.12:3000",
     "https://valourwealthdjango-production.up.railway.app",
     "https://valourwealthy.vercel.app",
-    "https://frontend-eight-rho-95.vercel.app"
+    "https://frontend-eight-rho-95.vercel.app",
+    "https://frontend-eight-rho-95.vercel.app", 
 
 ]
 
