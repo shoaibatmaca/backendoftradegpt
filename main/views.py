@@ -253,6 +253,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.conf import settings
 
+
+import requests
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.conf import settings
+
 # class OpenRouterProxyView(APIView):
 #     permission_classes = [AllowAny]
 
@@ -262,14 +269,14 @@ from django.conf import settings
 #             return Response({"error": "Missing prompt"}, status=400)
 
 #         headers = {
-#             "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",  # safer in env
+#             "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
 #             "Content-Type": "application/json",
-#             "HTTP-Referer": "https://frontend-eight-rho-95.vercel.app",  # your frontend URL
+#             "HTTP-Referer": "https://frontend-eight-rho-95.vercel.app",
 #             "X-Title": "TradeGPT Chat"
 #         }
 
 #         payload = {
-#             "model": "deepseek/deepseek-chat:free",
+#             "model": "deepseek/deepseek-chat-v3-0324:free",
 #             "messages": [{"role": "user", "content": prompt}]
 #         }
 
@@ -280,13 +287,8 @@ from django.conf import settings
 #             return Response({"error": str(e)}, status=500)
 
 
-import requests
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from django.conf import settings
 
-class OpenRouterProxyView(APIView):
+class OpenRouterProxyView(APIView):  # name kept same for compatibility
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -294,20 +296,19 @@ class OpenRouterProxyView(APIView):
         if not prompt:
             return Response({"error": "Missing prompt"}, status=400)
 
-        headers = {
-            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://frontend-eight-rho-95.vercel.app",
-            "X-Title": "TradeGPT Chat"
-        }
-
         payload = {
-            "model": "deepseek/deepseek-chat-v3-0324:free",  # ✅ new correct model
-            "messages": [{"role": "user", "content": prompt}]
+            "model": "deepseek-llm",  # change if needed (e.g., llama3)
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
         }
 
         try:
-            res = requests.post("https://openrouter.ai/api/v1/chat/completions", json=payload, headers=headers)
+            res = requests.post(
+                "https://working-coral-hopelessly.ngrok-free.app/api/ollama",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            )
             return Response(res.json(), status=res.status_code)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
