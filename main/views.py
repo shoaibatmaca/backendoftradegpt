@@ -124,38 +124,97 @@ class DailyMessageLimitView(APIView):
 
 
 
-import requests
+# import requests
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework.permissions import AllowAny
+# from django.conf import settings
+
+
+# import requests
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework.permissions import AllowAny
+# from django.conf import settings
+
+
+# import requests
+# import re
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework.permissions import AllowAny
+# from .utils import get_user_from_token 
+
+# from django.views.decorators.csrf import csrf_exempt
+# from django.utils.decorators import method_decorator
+
+# @method_decorator(csrf_exempt, name='dispatch')
+# class OpenRouterProxyView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         from .utils import get_user_from_token
+#         import requests, re
+
+#         token = request.GET.get("token")
+#         if not token:
+#             return Response({"error": "Token is missing"}, status=400)
+
+#         try:
+#             user = get_user_from_token(token)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=401)
+
+#         model = request.data.get("model")
+#         messages = request.data.get("messages")
+#         stream = request.data.get("stream", False)
+#         metadata = request.data.get("metadata", {})
+
+#         if not model or not messages:
+#             return Response({"error": "Missing model or messages"}, status=400)
+
+#         payload = {
+#             "model": model,
+#             "messages": messages,
+#             "stream": stream,
+#             "options": {
+#                 "temperature": 0.7,
+#                 "top_k": 40
+#             }
+#         }
+
+#         try:
+#             res = requests.post(
+#             "https://6e07-39-49-168-243.ngrok-free.app/api/chat",
+#                 json=payload,
+#                 headers={"Content-Type": "application/json"},
+#                 timeout=60
+#             )
+
+#             res_data = res.json()
+#             for key in ["message", "content", "response"]:
+#                 if key in res_data and isinstance(res_data[key], str):
+#                     res_data[key] = re.sub(r"<think>.*?</think>", "", res_data[key], flags=re.DOTALL)
+
+#             return Response(res_data, status=res.status_code)
+
+#         except Exception as e:
+#             return Response({"error": f"Ollama Local Error: {str(e)}"}, status=500)
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from django.conf import settings
-
-
-import requests
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from django.conf import settings
-
-
-import requests
-import re
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from .utils import get_user_from_token 
-
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from .utils import get_user_from_token
+import requests
+import re
 
 @method_decorator(csrf_exempt, name='dispatch')
 class OpenRouterProxyView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        from .utils import get_user_from_token
-        import requests, re
-
         token = request.GET.get("token")
         if not token:
             return Response({"error": "Token is missing"}, status=400)
@@ -168,35 +227,36 @@ class OpenRouterProxyView(APIView):
         model = request.data.get("model")
         messages = request.data.get("messages")
         stream = request.data.get("stream", False)
-        metadata = request.data.get("metadata", {})
 
         if not model or not messages:
             return Response({"error": "Missing model or messages"}, status=400)
 
+        # Convert OpenAI-style messages into a single prompt for Ollama
+        prompt = "\n\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
+
         payload = {
             "model": model,
-            "messages": messages,
+            "prompt": prompt,
             "stream": stream,
-            "options": {
-                "temperature": 0.7,
-                "top_k": 40
-            }
         }
 
         try:
             res = requests.post(
-            "https://6e07-39-49-168-243.ngrok-free.app/api/chat",
+                "https://6e07-39-49-168-243.ngrok-free.app/api/generate",  # Correct Ollama endpoint
                 json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=60
             )
-
+            res.raise_for_status()
             res_data = res.json()
-            for key in ["message", "content", "response"]:
-                if key in res_data and isinstance(res_data[key], str):
-                    res_data[key] = re.sub(r"<think>.*?</think>", "", res_data[key], flags=re.DOTALL)
 
-            return Response(res_data, status=res.status_code)
+            if "response" in res_data and isinstance(res_data["response"], str):
+                res_data["response"] = re.sub(r"<think>.*?</think>", "", res_data["response"], flags=re.DOTALL)
+
+            return Response({"message": res_data.get("response", "")}, status=res.status_code)
+
+        except requests.exceptions.RequestException as e:
+            return Response({"error": f"Ollama request failed: {str(e)}"}, status=500)
 
         except Exception as e:
-            return Response({"error": f"Ollama Local Error: {str(e)}"}, status=500)
+            return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
