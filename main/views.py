@@ -319,9 +319,12 @@ import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from .utils import get_user_from_token  # your JWT decode logic
+from .utils import get_user_from_token 
 
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
+@method_decorator(csrf_exempt, name='dispatch')
 class OpenRouterProxyView(APIView):
     permission_classes = [AllowAny]
 

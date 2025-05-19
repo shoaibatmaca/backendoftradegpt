@@ -147,7 +147,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://valourwealthdjango-production.up.railway.app",
     "https://valourwealthy.vercel.app",
     "https://frontend-eight-rho-95.vercel.app",
-    "https://frontend-eight-rho-95.vercel.app", 
+    "https://*.vercel.app",
+    "https://*.railway.app",
+    
 
 ]
 
