@@ -242,7 +242,7 @@ class OpenRouterProxyView(APIView):
 
         try:
             res = requests.post(
-                "https://6e07-39-49-168-243.ngrok-free.app/api/generate",  # Correct Ollama endpoint
+                "https://d955-119-156-137-152.ngrok-free.app/api/generate",  # Correct Ollama endpoint
                 json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=60
