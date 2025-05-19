@@ -288,27 +288,83 @@ from django.conf import settings
 
 
 
-class OpenRouterProxyView(APIView):  # name kept same for compatibility
+# class OpenRouterProxyView(APIView):  # name kept same for compatibility
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         prompt = request.data.get("prompt")
+#         if not prompt:
+#             return Response({"error": "Missing prompt"}, status=400)
+
+#         payload = {
+#             "model": "deepseek-llm",  # change if needed (e.g., llama3)
+#             "messages": [
+#                 {"role": "user", "content": prompt}
+#             ]
+#         }
+
+#         try:
+#             res = requests.post(
+#                 "https://working-coral-hopelessly.ngrok-free.app/api/ollama",
+#                 json=payload,
+#                 headers={"Content-Type": "application/json"}
+#             )
+#             return Response(res.json(), status=res.status_code)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=500)
+
+
+import requests
+import re
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from .utils import get_user_from_token  # your JWT decode logic
+
+
+class OpenRouterProxyView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        prompt = request.data.get("prompt")
-        if not prompt:
-            return Response({"error": "Missing prompt"}, status=400)
+        token = request.GET.get("token")
+        if not token:
+            return Response({"error": "Token is missing"}, status=400)
+
+        try:
+            user = get_user_from_token(token)
+        except Exception as e:
+            return Response({"error": str(e)}, status=401)
+
+        model = request.data.get("model")
+        messages = request.data.get("messages")
+        stream = request.data.get("stream", False)
+        metadata = request.data.get("metadata", {})
+
+        if not model or not messages:
+            return Response({"error": "Missing model or messages"}, status=400)
 
         payload = {
-            "model": "deepseek-llm",  # change if needed (e.g., llama3)
-            "messages": [
-                {"role": "user", "content": prompt}
-            ]
+            "model": model,
+            "messages": messages,
+            "stream": stream,
+            "metadata": metadata
         }
 
         try:
-            res = requests.post(
+            response = requests.post(
                 "https://working-coral-hopelessly.ngrok-free.app/api/ollama",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
+                timeout=60
             )
-            return Response(res.json(), status=res.status_code)
+
+            # parse and sanitize response
+            res_data = response.json()
+            for key in ["message", "content", "response"]:
+                if key in res_data and isinstance(res_data[key], str):
+                    res_data[key] = re.sub(r"<think>.*?</think>", "", res_data[key], flags=re.DOTALL)
+
+            return Response(res_data, status=response.status_code)
+
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            return Response({"error": f"Ollama Proxy Error: {str(e)}"}, status=500)
