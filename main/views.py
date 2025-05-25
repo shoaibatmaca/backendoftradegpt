@@ -130,6 +130,15 @@ from .utils import get_user_from_token
 import requests
 import re
 
+# this is for postman testing with this prompt:
+
+# {
+#   "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+#   "messages": [
+#     { "role": "user", "content": "What are the top 3 call option contracts today?" }
+#   ]
+# }
+
 # @method_decorator(csrf_exempt, name='dispatch')
 # class OpenRouterProxyView(APIView):
 #     permission_classes = [AllowAny]
@@ -145,35 +154,47 @@ import re
 #             return Response({"error": str(e)}, status=401)
 
 #         model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
-#         messages = request.data.get("messages")
+#         messages = request.data.get("messages", [])
 
 #         if not messages:
 #             return Response({"error": "Missing messages"}, status=400)
 
-#         prompt = "\n\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages]) + "\n\nASSISTANT:"
-#         url = f"https://api.deepinfra.com/v1/inference/{model}"
+#         # ✅ Construct prompt using DeepInfra's format
+#         prompt = "<|begin_of_text|>"
+#         for m in messages:
+#             role = m["role"]
+#             content = m["content"]
+#             prompt += f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
+#         prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+
+#         payload = {
+#             "input": prompt,
+#             "stop": ["<|eot_id|>"]
+#         }
 
 #         try:
 #             res = requests.post(
-#                 url,
+#                 f"https://api.deepinfra.com/v1/inference/{model}",
 #                 headers={
 #                     "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
 #                     "Content-Type": "application/json",
 #                 },
-#                 json={"inputs": {"prompt": prompt}},
+#                 json=payload,
 #                 timeout=60,
 #             )
 #             res.raise_for_status()
 #             data = res.json()
 
 #             return Response({
-#                 "message": data["outputs"][0]["content"]
+#                 "message": data["results"][0]["generated_text"]
 #             })
 
 #         except requests.exceptions.RequestException as e:
 #             return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
 #         except Exception as e:
 #             return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
+
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -190,24 +211,11 @@ class OpenRouterProxyView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=401)
 
-        model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
-        messages = request.data.get("messages", [])
+        model = request.data.get("model")
+        inputs = request.data.get("inputs")
 
-        if not messages:
-            return Response({"error": "Missing messages"}, status=400)
-
-        # ✅ Construct prompt using DeepInfra's format
-        prompt = "<|begin_of_text|>"
-        for m in messages:
-            role = m["role"]
-            content = m["content"]
-            prompt += f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
-        prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
-
-        payload = {
-            "input": prompt,
-            "stop": ["<|eot_id|>"]
-        }
+        if not model or not inputs or "prompt" not in inputs:
+            return Response({"error": "Missing model or prompt"}, status=400)
 
         try:
             res = requests.post(
@@ -216,7 +224,10 @@ class OpenRouterProxyView(APIView):
                     "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
                     "Content-Type": "application/json",
                 },
-                json=payload,
+                json={
+                    "input": inputs["prompt"],  # This is the correct key per DeepInfra docs
+                    "stop": ["<|eot_id|>"]
+                },
                 timeout=60,
             )
             res.raise_for_status()
