@@ -139,7 +139,13 @@ DATABASES = {
 }
 
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://frontend-eight-rho-95.vercel.app",
+    "https://valourwealthy.vercel.app",
+]
+CORS_ALLOW_CREDENTIALS = True
+
+# CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1:8000",
