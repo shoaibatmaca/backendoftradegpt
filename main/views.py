@@ -197,7 +197,6 @@ import re
 
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class OpenRouterProxyView(APIView):
     permission_classes = [AllowAny]
 
@@ -211,21 +210,23 @@ class OpenRouterProxyView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=401)
 
-        model = request.data.get("model")
-        inputs = request.data.get("inputs")
+        model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
+        inputs = request.data.get("inputs")  # ✅ NOT `messages`
 
-        if not model or not inputs or "prompt" not in inputs:
-            return Response({"error": "Missing model or prompt"}, status=400)
+        if not inputs or "prompt" not in inputs:
+            return Response({"error": "Missing prompt in 'inputs'"}, status=400)
+
+        url = f"https://api.deepinfra.com/v1/inference/{model}"
 
         try:
             res = requests.post(
-                f"https://api.deepinfra.com/v1/inference/{model}",
+                url,
                 headers={
-                    "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
+                    "Authorization": "Bearer YOUR_DEEPINFRA_API_KEY",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "input": inputs["prompt"],  # This is the correct key per DeepInfra docs
+                    "input": inputs["prompt"],  # ✅ DeepInfra expects `input`, not `inputs`
                     "stop": ["<|eot_id|>"]
                 },
                 timeout=60,
