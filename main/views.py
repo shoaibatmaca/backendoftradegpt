@@ -150,6 +150,7 @@ class OpenRouterProxyView(APIView):
         if not messages:
             return Response({"error": "Missing messages"}, status=400)
 
+        prompt = "\n\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages]) + "\n\nASSISTANT:"
         url = f"https://api.deepinfra.com/v1/inference/{model}"
 
         try:
@@ -159,7 +160,7 @@ class OpenRouterProxyView(APIView):
                     "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
                     "Content-Type": "application/json",
                 },
-                json={"inputs": {"messages": messages}},
+                json={"inputs": {"prompt": prompt}},
                 timeout=60,
             )
             res.raise_for_status()
