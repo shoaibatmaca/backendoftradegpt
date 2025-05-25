@@ -121,86 +121,6 @@ class DailyMessageLimitView(APIView):
 
         return Response({"count": count, "max": max_allowed})
 
-
-
-
-# import requests
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework.permissions import AllowAny
-# from django.conf import settings
-
-
-# import requests
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework.permissions import AllowAny
-# from django.conf import settings
-
-
-# import requests
-# import re
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework.permissions import AllowAny
-# from .utils import get_user_from_token 
-
-# from django.views.decorators.csrf import csrf_exempt
-# from django.utils.decorators import method_decorator
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class OpenRouterProxyView(APIView):
-#     permission_classes = [AllowAny]
-
-#     def post(self, request):
-#         from .utils import get_user_from_token
-#         import requests, re
-
-#         token = request.GET.get("token")
-#         if not token:
-#             return Response({"error": "Token is missing"}, status=400)
-
-#         try:
-#             user = get_user_from_token(token)
-#         except Exception as e:
-#             return Response({"error": str(e)}, status=401)
-
-#         model = request.data.get("model")
-#         messages = request.data.get("messages")
-#         stream = request.data.get("stream", False)
-#         metadata = request.data.get("metadata", {})
-
-#         if not model or not messages:
-#             return Response({"error": "Missing model or messages"}, status=400)
-
-#         payload = {
-#             "model": model,
-#             "messages": messages,
-#             "stream": stream,
-#             "options": {
-#                 "temperature": 0.7,
-#                 "top_k": 40
-#             }
-#         }
-
-#         try:
-#             res = requests.post(
-#             "https://6e07-39-49-168-243.ngrok-free.app/api/chat",
-#                 json=payload,
-#                 headers={"Content-Type": "application/json"},
-#                 timeout=60
-#             )
-
-#             res_data = res.json()
-#             for key in ["message", "content", "response"]:
-#                 if key in res_data and isinstance(res_data[key], str):
-#                     res_data[key] = re.sub(r"<think>.*?</think>", "", res_data[key], flags=re.DOTALL)
-
-#             return Response(res_data, status=res.status_code)
-
-#         except Exception as e:
-#             return Response({"error": f"Ollama Local Error: {str(e)}"}, status=500)
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -241,22 +161,25 @@ class OpenRouterProxyView(APIView):
         }
 
         try:
-            res = requests.post(
-                "https://d955-119-156-137-152.ngrok-free.app/api/generate",  # Correct Ollama endpoint
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=60
+            deepinfra_res = requests.post(
+                "https://api.deepinfra.com/v1/openai/chat/completions",
+                headers={
+                    "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,  # Example: "meta-llama/Meta-Llama-3-8B-Instruct"
+                    "messages": messages,
+                    "stream": stream,
+                },
+                timeout=60,
             )
-            res.raise_for_status()
-            res_data = res.json()
-
-            if "response" in res_data and isinstance(res_data["response"], str):
-                res_data["response"] = re.sub(r"<think>.*?</think>", "", res_data["response"], flags=re.DOTALL)
-
-            return Response({"message": res_data.get("response", "")}, status=res.status_code)
+            deepinfra_res.raise_for_status()
+            data = deepinfra_res.json()
+            return Response({"message": data["choices"][0]["message"]["content"]})
 
         except requests.exceptions.RequestException as e:
-            return Response({"error": f"Ollama request failed: {str(e)}"}, status=500)
-
+            return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
+        
         except Exception as e:
             return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
