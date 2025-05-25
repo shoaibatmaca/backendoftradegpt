@@ -130,6 +130,50 @@ from .utils import get_user_from_token
 import requests
 import re
 
+# @method_decorator(csrf_exempt, name='dispatch')
+# class OpenRouterProxyView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         token = request.GET.get("token")
+#         if not token:
+#             return Response({"error": "Token is missing"}, status=400)
+
+#         try:
+#             user = get_user_from_token(token)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=401)
+
+#         model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
+#         messages = request.data.get("messages")
+
+#         if not messages:
+#             return Response({"error": "Missing messages"}, status=400)
+
+#         prompt = "\n\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages]) + "\n\nASSISTANT:"
+#         url = f"https://api.deepinfra.com/v1/inference/{model}"
+
+#         try:
+#             res = requests.post(
+#                 url,
+#                 headers={
+#                     "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
+#                     "Content-Type": "application/json",
+#                 },
+#                 json={"inputs": {"prompt": prompt}},
+#                 timeout=60,
+#             )
+#             res.raise_for_status()
+#             data = res.json()
+
+#             return Response({
+#                 "message": data["outputs"][0]["content"]
+#             })
+
+#         except requests.exceptions.RequestException as e:
+#             return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
+#         except Exception as e:
+#             return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
 @method_decorator(csrf_exempt, name='dispatch')
 class OpenRouterProxyView(APIView):
     permission_classes = [AllowAny]
@@ -145,30 +189,38 @@ class OpenRouterProxyView(APIView):
             return Response({"error": str(e)}, status=401)
 
         model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
+
+        # ✅ Accept `inputs.prompt` OR `messages`
+        prompt = request.data.get("inputs", {}).get("prompt")
         messages = request.data.get("messages")
 
-        if not messages:
-            return Response({"error": "Missing messages"}, status=400)
-
-        prompt = "\n\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages]) + "\n\nASSISTANT:"
-        url = f"https://api.deepinfra.com/v1/inference/{model}"
+        if model.startswith("meta-llama/"):
+            if not prompt:
+                return Response({"error": "Missing prompt for LLaMA model"}, status=400)
+            payload = {"inputs": {"prompt": prompt}}
+        else:
+            if not messages:
+                return Response({"error": "Missing messages for chat model"}, status=400)
+            payload = {"inputs": {"messages": messages}}
 
         try:
             res = requests.post(
-                url,
+                f"https://api.deepinfra.com/v1/inference/{model}",
                 headers={
                     "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
                     "Content-Type": "application/json",
                 },
-                json={"inputs": {"prompt": prompt}},
+                json=payload,
                 timeout=60,
             )
             res.raise_for_status()
             data = res.json()
 
-            return Response({
-                "message": data["outputs"][0]["content"]
-            })
+            # ✅ Use appropriate key depending on model type
+            if model.startswith("meta-llama/"):
+                return Response({"message": data["outputs"][0]["content"]})
+            else:
+                return Response({"message": data["outputs"][0]["message"]["content"]})
 
         except requests.exceptions.RequestException as e:
             return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
