@@ -197,6 +197,62 @@ import re
 
 
 
+# class OpenRouterProxyView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         token = request.GET.get("token")
+#         if not token:
+#             return Response({"error": "Token is missing"}, status=400)
+
+#         try:
+#             user = get_user_from_token(token)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=401)
+
+#         model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
+#         inputs = request.data.get("inputs")  # ✅ NOT `messages`
+
+#         if not inputs or "prompt" not in inputs:
+#             return Response({"error": "Missing prompt in 'inputs'"}, status=400)
+
+#         url = f"https://api.deepinfra.com/v1/inference/{model}"
+
+#         try:
+#             res = requests.post(
+#                 url,
+#                 headers={
+#                     "Authorization": "Bearer YOUR_DEEPINFRA_API_KEY",
+#                     "Content-Type": "application/json",
+#                 },
+#                 json={
+#                     "input": inputs["prompt"],  # ✅ DeepInfra expects `input`, not `inputs`
+#                     "stop": ["<|eot_id|>"]
+#                 },
+#                 timeout=60,
+#             )
+#             res.raise_for_status()
+#             data = res.json()
+
+#             return Response({
+#                 "message": data["results"][0]["generated_text"]
+#             })
+
+#         except requests.exceptions.RequestException as e:
+#             return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
+#         except Exception as e:
+#             return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from .utils import get_user_from_token
+import requests
+
+
+@method_decorator(csrf_exempt, name='dispatch')
 class OpenRouterProxyView(APIView):
     permission_classes = [AllowAny]
 
@@ -210,10 +266,11 @@ class OpenRouterProxyView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=401)
 
-        model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
-        inputs = request.data.get("inputs")  # ✅ NOT `messages`
+        model = request.data.get("model")
+        inputs = request.data.get("inputs", {})
+        prompt = inputs.get("prompt")
 
-        if not inputs or "prompt" not in inputs:
+        if not prompt:
             return Response({"error": "Missing prompt in 'inputs'"}, status=400)
 
         url = f"https://api.deepinfra.com/v1/inference/{model}"
@@ -222,11 +279,11 @@ class OpenRouterProxyView(APIView):
             res = requests.post(
                 url,
                 headers={
-                    "Authorization": "Bearer YOUR_DEEPINFRA_API_KEY",
+                    "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "input": inputs["prompt"],  # ✅ DeepInfra expects `input`, not `inputs`
+                    "input": prompt,  # ✅ DeepInfra expects 'input', not 'inputs'
                     "stop": ["<|eot_id|>"]
                 },
                 timeout=60,
