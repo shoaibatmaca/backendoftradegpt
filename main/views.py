@@ -174,6 +174,8 @@ import re
 #             return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
 #         except Exception as e:
 #             return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class OpenRouterProxyView(APIView):
     permission_classes = [AllowAny]
@@ -189,19 +191,23 @@ class OpenRouterProxyView(APIView):
             return Response({"error": str(e)}, status=401)
 
         model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
+        messages = request.data.get("messages", [])
 
-        # ✅ Accept `inputs.prompt` OR `messages`
-        prompt = request.data.get("inputs", {}).get("prompt")
-        messages = request.data.get("messages")
+        if not messages:
+            return Response({"error": "Missing messages"}, status=400)
 
-        if model.startswith("meta-llama/"):
-            if not prompt:
-                return Response({"error": "Missing prompt for LLaMA model"}, status=400)
-            payload = {"inputs": {"prompt": prompt}}
-        else:
-            if not messages:
-                return Response({"error": "Missing messages for chat model"}, status=400)
-            payload = {"inputs": {"messages": messages}}
+        # ✅ Construct prompt using DeepInfra's format
+        prompt = "<|begin_of_text|>"
+        for m in messages:
+            role = m["role"]
+            content = m["content"]
+            prompt += f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
+        prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+
+        payload = {
+            "input": prompt,
+            "stop": ["<|eot_id|>"]
+        }
 
         try:
             res = requests.post(
@@ -216,11 +222,9 @@ class OpenRouterProxyView(APIView):
             res.raise_for_status()
             data = res.json()
 
-            # ✅ Use appropriate key depending on model type
-            if model.startswith("meta-llama/"):
-                return Response({"message": data["outputs"][0]["content"]})
-            else:
-                return Response({"message": data["outputs"][0]["message"]["content"]})
+            return Response({
+                "message": data["results"][0]["generated_text"]
+            })
 
         except requests.exceptions.RequestException as e:
             return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
