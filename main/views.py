@@ -144,42 +144,32 @@ class OpenRouterProxyView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=401)
 
-        model = request.data.get("model")
+        model = request.data.get("model", "meta-llama/Meta-Llama-3-8B-Instruct")
         messages = request.data.get("messages")
-        stream = request.data.get("stream", False)
 
-        if not model or not messages:
-            return Response({"error": "Missing model or messages"}, status=400)
+        if not messages:
+            return Response({"error": "Missing messages"}, status=400)
 
-        # Convert OpenAI-style messages into a single prompt for Ollama
-        prompt = "\n\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
-
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": stream,
-        }
+        url = f"https://api.deepinfra.com/v1/inference/{model}"
 
         try:
-            deepinfra_res = requests.post(
-                "https://api.deepinfra.com/v1/openai/chat/completions",
+            res = requests.post(
+                url,
                 headers={
                     "Authorization": "Bearer FO6ABeaUsSMh82prJuEF2U6uDcBXnBLt",
                     "Content-Type": "application/json",
                 },
-                json={
-                    "model": model,  # Example: "meta-llama/Meta-Llama-3-8B-Instruct"
-                    "messages": messages,
-                    "stream": stream,
-                },
+                json={"inputs": {"messages": messages}},
                 timeout=60,
             )
-            deepinfra_res.raise_for_status()
-            data = deepinfra_res.json()
-            return Response({"message": data["choices"][0]["message"]["content"]})
+            res.raise_for_status()
+            data = res.json()
+
+            return Response({
+                "message": data["outputs"][0]["content"]
+            })
 
         except requests.exceptions.RequestException as e:
             return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
-        
         except Exception as e:
             return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
