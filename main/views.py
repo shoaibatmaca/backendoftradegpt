@@ -501,7 +501,7 @@ Respond in this structure with all values you can infer. Format field labels in 
                     {"role": "user", "content": prompt},
                 ],
                 stream=False,
-                timeout=20
+                timeout=50
             )
 
             end = time.time()
