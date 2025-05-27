@@ -504,6 +504,122 @@ class OpenRouterProxyView(APIView):
 
 
 
+
+# worker===================================================================================
+# import re
+# import logging
+
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework.permissions import AllowAny
+# from django.views.decorators.csrf import csrf_exempt
+# from django.utils.decorators import method_decorator
+# from openai import OpenAI
+
+# logger = logging.getLogger(__name__)
+
+# def clean_special_chars(text):
+#     # Remove markdown bold/italic/code formatting
+#     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+#     text = re.sub(r'\*(.*?)\*', r'\1', text)
+#     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
+#     text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)  # Remove headers (e.g., ##)
+#     text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)  # Remove emojis
+#     return text.strip()
+
+# @method_decorator(csrf_exempt, name='dispatch')
+# class DeepSeekChatView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         try:
+#             data = request.data
+
+#             symbol = data.get("symbol", "N/A")
+#             name = data.get("name", "N/A")
+#             query_type = data.get("queryType", "N/A")
+#             price = data.get("price", "N/A")
+#             open_ = data.get("open", "N/A")
+#             high = data.get("high", "N/A")
+#             low = data.get("low", "N/A")
+#             previous_close = data.get("previousClose", "N/A")
+#             volume = data.get("volume", "N/A")
+#             trend = data.get("trend", "N/A")
+#             news_list = data.get("news", [])
+
+#             news_lines = ""
+#             for item in news_list[:5]:
+#                 headline = item.get("headline", "No headline")
+#                 time_str = item.get("time", "Unknown time")
+#                 category = item.get("category", "General")
+#                 news_lines += f"- {headline} at {time_str} | {category}\n"
+
+#             if not news_lines.strip():
+#                 news_lines = "No major headlines available."
+
+#             prompt = f"""
+# Act as an expert financial analyst and return your analysis in clear markdown format.
+
+# ## Company Overview  
+# **Symbol:** {symbol}  
+# **Company:** {name}  
+# **Price:** ${price}  
+# **Open:** ${open_}  
+# **High:** ${high}  
+# **Low:** ${low}  
+# **Previous Close:** ${previous_close}  
+# **Volume:** {volume}  
+# **Trend:** {trend}  
+# Query Type: {query_type}  
+
+# News Headlines  
+# {news_lines}
+
+# ## Key Financial Metrics  
+# List valuation ratios, margins, ROE, and any known financial KPIs.
+
+# ## Strategic Initiatives  
+# Mention growth areas, innovations, or major company projects.
+
+# ## Upcoming Events  
+# Include earnings dates, estimates, and any financial releases.
+
+# ## Analyst Insights  
+# Summarize bullish/bearish factors, estimates, momentum, and sentiment.
+
+# ## Risks  
+# Highlight major financial, regulatory, or competitive risks.
+# """
+
+#             client = OpenAI(
+#                 api_key="sk-fd092005f2f446d78dade7662a13c896",
+#                 base_url="https://api.deepseek.com"
+#             )
+
+#             chat_response = client.chat.completions.create(
+#                 model="deepseek-chat",
+#                 messages=[
+#                     {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 stream=False
+#             )
+
+#             raw = chat_response.choices[0].message.content
+
+#             if not raw.lstrip().lower().startswith("company overview"):
+#                 raw = "Company Overview\n\n" + raw
+
+#             cleaned = clean_special_chars(raw)
+
+#             return Response({"message": cleaned})
+
+#         except Exception as e:
+#             logger.error(f"DeepSeek error: {str(e)}")
+#             return Response({"error": str(e)}, status=500)
+
+
+
 import re
 import logging
 
@@ -516,14 +632,37 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-def clean_special_chars(text):
-    # Remove markdown bold/italic/code formatting
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-    text = re.sub(r'\*(.*?)\*', r'\1', text)
-    text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
-    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)  # Remove headers (e.g., ##)
-    text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)  # Remove emojis
-    return text.strip()
+def convert_markdown_to_html_sections(markdown):
+    html_output = ""
+    lines = markdown.splitlines()
+    current_section = ""
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        if line.startswith("##"):
+            if current_section:
+                html_output += f"</div>"
+            heading = re.sub(r'^#+\s*', '', line)
+            html_output += f'<div style="margin-top:24px"><h3 style="font-weight:600">{heading}</h3>'
+            current_section = heading
+        elif re.match(r'^-\s', line):
+            content = line[2:].strip()
+            html_output += f'<p style="margin-left: 1rem">{content}</p>'
+        elif ":" in line:
+            parts = line.split(":", 1)
+            key = parts[0].strip()
+            value = parts[1].strip()
+            html_output += f'<p><strong>{key}:</strong> {value}</p>'
+        else:
+            html_output += f"<p>{line}</p>"
+
+    if current_section:
+        html_output += "</div>"
+
+    return html_output.strip()
 
 @method_decorator(csrf_exempt, name='dispatch')
 class DeepSeekChatView(APIView):
@@ -557,6 +696,9 @@ class DeepSeekChatView(APIView):
 
             prompt = f"""
 Act as an expert financial analyst and return your analysis in clear markdown format.
+
+## Technical & Fundamental Analysis: {name} ({symbol})
+**Price:** ${price} | **Trend:** {trend} | **Date:** 2025-05-27
 
 ## Company Overview  
 **Symbol:** {symbol}  
@@ -604,13 +746,9 @@ Highlight major financial, regulatory, or competitive risks.
             )
 
             raw = chat_response.choices[0].message.content
+            html_cleaned = convert_markdown_to_html_sections(raw)
 
-            if not raw.lstrip().lower().startswith("company overview"):
-                raw = "Company Overview\n\n" + raw
-
-            cleaned = clean_special_chars(raw)
-
-            return Response({"message": cleaned})
+            return Response({"message": html_cleaned})
 
         except Exception as e:
             logger.error(f"DeepSeek error: {str(e)}")
