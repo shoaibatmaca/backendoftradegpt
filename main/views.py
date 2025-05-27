@@ -504,6 +504,8 @@ class OpenRouterProxyView(APIView):
 
 
 
+import re
+import logging
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -511,9 +513,17 @@ from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from openai import OpenAI
-import logging
 
 logger = logging.getLogger(__name__)
+
+def clean_special_chars(text):
+    # Remove markdown bold/italic/code formatting
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+    text = re.sub(r'\*(.*?)\*', r'\1', text)
+    text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
+    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)  # Remove headers (e.g., ##)
+    text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)  # Remove emojis
+    return text.strip()
 
 @method_decorator(csrf_exempt, name='dispatch')
 class DeepSeekChatView(APIView):
@@ -540,10 +550,10 @@ class DeepSeekChatView(APIView):
                 headline = item.get("headline", "No headline")
                 time_str = item.get("time", "Unknown time")
                 category = item.get("category", "General")
-                news_lines += f"- **{headline}** at *{time_str}* | *{category}*\n"
+                news_lines += f"- {headline} at {time_str} | {category}\n"
 
-            if not news_lines:
-                news_lines = "*No major headlines available.*"
+            if not news_lines.strip():
+                news_lines = "No major headlines available."
 
             prompt = f"""
 Act as an expert financial analyst and return your analysis in clear markdown format.
@@ -558,9 +568,9 @@ Act as an expert financial analyst and return your analysis in clear markdown fo
 **Previous Close:** ${previous_close}  
 **Volume:** {volume}  
 **Trend:** {trend}  
-**Query Type:** {query_type}  
+Query Type: {query_type}  
 
-## News Headlines  
+News Headlines  
 {news_lines}
 
 ## Key Financial Metrics  
@@ -584,19 +594,23 @@ Highlight major financial, regulatory, or competitive risks.
                 base_url="https://api.deepseek.com"
             )
 
-            # Do NOT use timeout or stream
             chat_response = client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
                     {"role": "user", "content": prompt}
                 ],
-                stream=False  # ✅ keep this off
+                stream=False
             )
 
-            return Response({
-                "message": chat_response.choices[0].message.content
-            })
+            raw = chat_response.choices[0].message.content
+
+            if not raw.lstrip().lower().startswith("company overview"):
+                raw = "Company Overview\n\n" + raw
+
+            cleaned = clean_special_chars(raw)
+
+            return Response({"message": cleaned})
 
         except Exception as e:
             logger.error(f"DeepSeek error: {str(e)}")
