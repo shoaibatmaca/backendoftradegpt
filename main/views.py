@@ -399,12 +399,14 @@ class OpenRouterProxyView(APIView):
 
 
 
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from openai import OpenAI  # <-- using OpenAI SDK
+from openai import OpenAI  # DeepSeek uses OpenAI-compatible SDK
+import time
 
 @method_decorator(csrf_exempt, name='dispatch')
 class DeepSeekChatView(APIView):
@@ -426,13 +428,17 @@ class DeepSeekChatView(APIView):
         trend = data.get("trend", "N/A")
         news_list = data.get("news", [])
 
+        # Build news headlines (truncate if too long)
         news_lines = ""
-        for n in news_list:
+        for n in news_list[:5]:  # Limit to first 5 for brevity
             headline = n.get("headline", "No headline")
             time = n.get("time", "Unknown time")
             category = n.get("category", "General")
             news_lines += f"- **{headline}** at *{time}* | *{category}*\n"
+        if len(news_lines) > 2000:
+            news_lines = news_lines[:2000] + "\n..."
 
+        # Construct prompt
         prompt = f"""
 Act as an expert financial analyst and return your analysis in clear markdown format.
 
@@ -470,19 +476,26 @@ Respond in this structure with all values you can infer. Format field labels in 
 """
 
         try:
+            print("Calling DeepSeek API...")
+            start = time.time()
+
             client = OpenAI(
-                api_key="sk-fd092005f2f446d78dade7662a13c896",
-                base_url="https://api.deepseek.com"
+                api_key="sk-fd092005f2f446d78dade7662a13c896",  # Make sure this is valid
+                base_url="https://api.deepseek.com"  # or https://api.deepseek.com/v1
             )
 
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-chat",  # DeepSeek V3 is still 'deepseek-chat'
                 messages=[
                     {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
                     {"role": "user", "content": prompt},
                 ],
-                stream=False
+                stream=False,
+                timeout=20
             )
+
+            end = time.time()
+            print(f"DeepSeek response time: {end - start:.2f} seconds")
 
             return Response({"message": response.choices[0].message.content})
 
