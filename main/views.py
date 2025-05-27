@@ -519,12 +519,11 @@ from openai import OpenAI
 logger = logging.getLogger(__name__)
 
 def clean_special_chars(text):
-    # Remove markdown bold/italic/code formatting
     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
     text = re.sub(r'\*(.*?)\*', r'\1', text)
     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
-    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)  # Remove headers (e.g., ##)
-    text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)  # Remove emojis
+    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)
     return text.strip()
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -537,7 +536,7 @@ class DeepSeekChatView(APIView):
 
             symbol = data.get("symbol", "N/A")
             name = data.get("name", "N/A")
-            query_type = data.get("queryType", "N/A")
+            query_type = data.get("queryType", "default").lower()
             price = data.get("price", "N/A")
             open_ = data.get("open", "N/A")
             high = data.get("high", "N/A")
@@ -557,8 +556,31 @@ class DeepSeekChatView(APIView):
             if not news_lines.strip():
                 news_lines = "No major headlines available."
 
-            prompt = f"""
-Act as an expert financial analyst and return your analysis in clear markdown format.
+            # Prompt logic based on query_type
+            if query_type == "price_chart":
+                prompt = f"""
+Act as a financial data analyst. Generate a markdown section showing recent price action for {name} ({symbol}). Include:
+
+- Volatility patterns (peaks/troughs)
+- Trend direction (e.g., bullish/bearish)
+- Notable price movements (from {open_} to {price})
+- Use time periods and mention if it's trending or consolidating.
+
+## Price Movements  
+Price: ${price}, Open: ${open_}, High: ${high}, Low: ${low}, Previous Close: ${previous_close}  
+Volume: {volume}  
+Trend: {trend}
+"""
+            elif query_type == "recent_news":
+                prompt = f"""
+Act as a financial news summarizer. Provide a markdown list of the most recent headlines for {name} ({symbol}). Highlight important insights and categorize by theme (AI, Cloud, Competition, etc).
+
+## Recent News  
+{news_lines}
+"""
+            elif query_type == "fundamental_analysis":
+                prompt = f"""
+Act as an expert financial analyst. Provide a full markdown-formatted breakdown of {name} ({symbol}).
 
 ## Company Overview  
 **Symbol:** {symbol}  
@@ -590,6 +612,27 @@ Summarize bullish/bearish factors, estimates, momentum, and sentiment.
 ## Risks  
 Highlight major financial, regulatory, or competitive risks.
 """
+            else:
+                # Default = Trade Idea
+                prompt = f"""
+Act as a professional trader. Based on {name}'s ({symbol}) recent price and news data, suggest a technical trade idea (entry, stop loss, target). Add reasoning using price action and sentiment.
+
+**Symbol:** {symbol}  
+**Company:** {name}  
+**Price:** ${price}  
+**Open:** ${open_}  
+**High:** ${high}  
+**Low:** ${low}  
+**Previous Close:** ${previous_close}  
+**Volume:** {volume}  
+**Trend:** {trend}  
+
+News Headlines  
+{news_lines}
+
+## Trade Setup  
+Explain entry strategy, stop-loss and target. Mention chart signals like RSI, MACD, moving averages or support/resistance.
+"""
 
             client = OpenAI(
                 api_key="sk-fd092005f2f446d78dade7662a13c896",
@@ -607,7 +650,7 @@ Highlight major financial, regulatory, or competitive risks.
 
             raw = chat_response.choices[0].message.content
 
-            if not raw.lstrip().lower().startswith("company overview"):
+            if not raw.lstrip().lower().startswith("company overview") and query_type == "fundamental_analysis":
                 raw = "Company Overview\n\n" + raw
 
             cleaned = clean_special_chars(raw)
@@ -617,7 +660,6 @@ Highlight major financial, regulatory, or competitive risks.
         except Exception as e:
             logger.error(f"DeepSeek error: {str(e)}")
             return Response({"error": str(e)}, status=500)
-
 
 
 # import re
