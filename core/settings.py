@@ -139,25 +139,36 @@ DATABASES = {
 }
 
 
+# CORS_ALLOWED_ORIGINS = [
+#     "https://frontend-eight-rho-95.vercel.app",
+#     "https://valourwealthy.vercel.app",
+# ]
+# CORS_ALLOW_CREDENTIALS = True
+
+# # CORS_ALLOW_ALL_ORIGINS = True
+# CSRF_TRUSTED_ORIGINS = [
+#     "http://localhost",
+#     "http://127.0.0.1:8000",
+#     "https://192.168.1.12:3000",
+#     "https://valourwealthdjango-production.up.railway.app",
+#     "https://valourwealthy.vercel.app",
+#     "https://frontend-eight-rho-95.vercel.app",
+#     "https://*.vercel.app",
+#     "https://*.railway.app",
+# ]
+
+
+
+# for real
+CORS_ALLOW_ALL_ORIGINS = False  # turn this OFF for security
 CORS_ALLOWED_ORIGINS = [
     "https://frontend-eight-rho-95.vercel.app",
     "https://valourwealthy.vercel.app",
-]
-CORS_ALLOW_CREDENTIALS = True
-
-# CORS_ALLOW_ALL_ORIGINS = True
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost",
+    "https://valourwealthdjango-production.up.railway.app",
     "http://127.0.0.1:8000",
     "https://192.168.1.12:3000",
-    "https://valourwealthdjango-production.up.railway.app",
-    "https://valourwealthy.vercel.app",
-    "https://frontend-eight-rho-95.vercel.app",
-    "https://*.vercel.app",
-    "https://*.railway.app",
-    
-
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 
 
