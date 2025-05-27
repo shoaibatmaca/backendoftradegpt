@@ -429,14 +429,24 @@ class DeepSeekChatView(APIView):
         news_list = data.get("news", [])
 
         # Build news headlines (truncate if too long)
+        # news_lines = ""
+        # for n in news_list[:5]:  # Limit to first 5 for brevity
+        #     headline = n.get("headline", "No headline")
+        #     time = n.get("time", "Unknown time")
+        #     category = n.get("category", "General")
+        #     news_lines += f"- **{headline}** at *{time}* | *{category}*\n"
+        # if len(news_lines) > 2000:
+        #     news_lines = news_lines[:2000] + "\n..."
+
         news_lines = ""
-        for n in news_list[:5]:  # Limit to first 5 for brevity
-            headline = n.get("headline", "No headline")
-            time = n.get("time", "Unknown time")
-            category = n.get("category", "General")
-            news_lines += f"- **{headline}** at *{time}* | *{category}*\n"
-        if len(news_lines) > 2000:
-            news_lines = news_lines[:2000] + "\n..."
+        for n in news_list[:5]:
+                if isinstance(n, dict):
+                    headline = n.get("headline", "No headline")
+                    news_time = n.get("time", "Unknown time")  # renamed to avoid conflict with import
+                    category = n.get("category", "General")
+                    news_lines += f"- **{headline}** at *{news_time}* | *{category}*\n"
+                else:
+                   news_lines += f"- **{str(n)}**\n"
 
         # Construct prompt
         prompt = f"""
