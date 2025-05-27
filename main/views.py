@@ -672,6 +672,7 @@ from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from openai import OpenAI
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -818,6 +819,7 @@ Explain entry, stop-loss, target and technical indicators.
                     content = chunk.choices[0].delta.content
                     if content:
                         yield content
+                        time.sleep(0.02)
 
             return StreamingHttpResponse(stream(), content_type="text/plain")
 
