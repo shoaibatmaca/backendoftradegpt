@@ -283,7 +283,7 @@ class OpenRouterProxyView(APIView):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "input": prompt,  # ✅ DeepInfra expects 'input', not 'inputs'
+                    "input": prompt, 
                     "stop": ["<|eot_id|>"]
                 },
                 timeout=60,
@@ -299,3 +299,67 @@ class OpenRouterProxyView(APIView):
             return Response({"error": f"DeepInfra request failed: {str(e)}"}, status=500)
         except Exception as e:
             return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
+
+
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import requests
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DeepSeekChatView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # receive: symbol, name, open, high, low, volume, previousClose, news[], queryType
+        data = request.data
+        symbol = data.get("symbol")
+        name = data.get("name")
+        query_type = data.get("queryType")
+
+        prompt = f"""
+        Act as an expert financial analyst. Provide a structured analysis for the following ticker based on the context.
+
+        ▶ Symbol: {symbol}
+        ▶ Company: {name}
+        ▶ Price: ${data.get("price")}
+        ▶ Open: ${data.get("open")}
+        ▶ High: ${data.get("high")}
+        ▶ Low: ${data.get("low")}
+        ▶ Previous Close: ${data.get("previousClose")}
+        ▶ Volume: {data.get("volume")}
+        ▶ Trend: {data.get("trend")}
+        ▶ Query Type: {query_type}
+
+        📰 Top News:
+        {"".join([f"- {n['headline']} at {n['time']} | {n['category']}\n" for n in data.get("news", [])])}
+
+        Based on the above, give a response for: "{query_type}". Include company overview, key ratios, strategic initiatives, upcoming events, risks, and trade suggestions if applicable.
+        """
+
+        headers = {
+            "Authorization": "Bearer sk-fd092005f2f446d78dade7662a13c896",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "stream": False
+        }
+
+        try:
+            res = requests.post("https://api.deepseek.com/v1/chat/completions", headers=headers, json=payload)
+            res.raise_for_status()
+            result = res.json()
+            return Response({"message": result["choices"][0]["message"]["content"]})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)

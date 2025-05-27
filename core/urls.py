@@ -18,18 +18,6 @@ from django.contrib import admin
 from django.urls import path
 from main.views import *
 
-# urlpatterns = [
-#     path('admin/', admin.site.urls),
-#     path("api/chat/start/", StartChatSessionView.as_view()),
-#     path("chat/sessions/<uuid:session_id>/messages/", MessageListCreateView.as_view()),
-#     path("chat/user-sessions/", UserChatSessionsView.as_view()),
-#     path("chat/message-limit/", DailyMessageLimitView.as_view()),
-    
-#     path("proxy/openrouter/", OpenRouterProxyView.as_view()),
-#     path("chat/user/", TradeGPTUserView.as_view())
-
-# ]
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/chat/start/", StartChatSessionView.as_view()),
@@ -37,6 +25,8 @@ urlpatterns = [
     path("api/chat/user-sessions/", UserChatSessionsView.as_view()),
     path("api/chat/message-limit/", DailyMessageLimitView.as_view()),
     path("api/proxy/openrouter/", OpenRouterProxyView.as_view()),
-    path("api/chat/user/", TradeGPTUserView.as_view())
+    path("api/chat/user/", TradeGPTUserView.as_view()),
+    path("api/deepseek-chat/", DeepSeekChatView.as_view())
+    
 ]
 
