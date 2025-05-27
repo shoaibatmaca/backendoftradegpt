@@ -302,7 +302,6 @@ class OpenRouterProxyView(APIView):
 
 
 
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -310,35 +309,68 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import requests
 
+
 @method_decorator(csrf_exempt, name='dispatch')
 class DeepSeekChatView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        # receive: symbol, name, open, high, low, volume, previousClose, news[], queryType
         data = request.data
+
         symbol = data.get("symbol")
         name = data.get("name")
         query_type = data.get("queryType")
 
+        price = data.get("price", "N/A")
+        open_ = data.get("open", "N/A")
+        high = data.get("high", "N/A")
+        low = data.get("low", "N/A")
+        previous_close = data.get("previousClose", "N/A")
+        volume = data.get("volume", "N/A")
+        trend = data.get("trend", "N/A")
+        news_list = data.get("news", [])
+
+        news_lines = ""
+        for n in news_list:
+            headline = n.get("headline", "No headline")
+            time = n.get("time", "Unknown time")
+            category = n.get("category", "General")
+            news_lines += f"- **{headline}** at *{time}* | *{category}*\n"
+
         prompt = f"""
-        Act as an expert financial analyst. Provide a structured analysis for the following ticker based on the context.
+Act as an expert financial analyst and return your analysis in clear markdown format.
 
-        ▶ Symbol: {symbol}
-        ▶ Company: {name}
-        ▶ Price: ${data.get("price")}
-        ▶ Open: ${data.get("open")}
-        ▶ High: ${data.get("high")}
-        ▶ Low: ${data.get("low")}
-        ▶ Previous Close: ${data.get("previousClose")}
-        ▶ Volume: {data.get("volume")}
-        ▶ Trend: {data.get("trend")}
-        ▶ Query Type: {query_type}
+## Company Overview  
+**Symbol:** {symbol}  
+**Company:** {name}  
+**Price:** ${price}  
+**Open:** ${open_}  
+**High:** ${high}  
+**Low:** ${low}  
+**Previous Close:** ${previous_close}  
+**Volume:** {volume}  
+**Trend:** {trend}  
+**Query Type:** {query_type}  
 
-        📰 Top News:
-        {"".join([f"- {n['headline']} at {n['time']} | {n['category']}\n" for n in data.get("news", [])])}
+## News Headlines  
+{news_lines or '*No major headlines available.*'}
 
-        Based on the above, give a response for: "{query_type}". Include company overview, key ratios, strategic initiatives, upcoming events, risks, and trade suggestions if applicable.
+## Key Financial Metrics  
+List valuation ratios, margins, ROE, and any known financial KPIs.
+
+## Strategic Initiatives  
+Mention growth areas, innovations, or major company projects.
+
+## Upcoming Events  
+Include earnings dates, estimates, and any financial releases.
+
+## Analyst Insights  
+Summarize bullish/bearish factors, estimates, momentum, and sentiment.
+
+## Risks  
+Highlight major financial, regulatory, or competitive risks.
+
+Respond in this structure with all values you can infer. Format field labels in **bold** for frontend readability.
         """
 
         headers = {
