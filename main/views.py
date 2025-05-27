@@ -505,12 +505,169 @@ class OpenRouterProxyView(APIView):
 
 
 
-# worker===================================================================================
+# # worker===================================================================================
+# import re
+# import logging
+
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework.permissions import AllowAny
+# from django.views.decorators.csrf import csrf_exempt
+# from django.utils.decorators import method_decorator
+# from openai import OpenAI
+
+# logger = logging.getLogger(__name__)
+
+# def clean_special_chars(text):
+#     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+#     text = re.sub(r'\*(.*?)\*', r'\1', text)
+#     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
+#     text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+#     text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)
+#     return text.strip()
+
+# @method_decorator(csrf_exempt, name='dispatch')
+# class DeepSeekChatView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         try:
+#             data = request.data
+
+#             symbol = data.get("symbol", "N/A")
+#             name = data.get("name", "N/A")
+#             query_type = data.get("queryType", "default").lower()
+#             price = data.get("price", "N/A")
+#             open_ = data.get("open", "N/A")
+#             high = data.get("high", "N/A")
+#             low = data.get("low", "N/A")
+#             previous_close = data.get("previousClose", "N/A")
+#             volume = data.get("volume", "N/A")
+#             trend = data.get("trend", "N/A")
+#             news_list = data.get("news", [])
+
+#             news_lines = ""
+#             for item in news_list[:5]:
+#                 headline = item.get("headline", "No headline")
+#                 time_str = item.get("time", "Unknown time")
+#                 category = item.get("category", "General")
+#                 news_lines += f"- {headline} at {time_str} | {category}\n"
+
+#             if not news_lines.strip():
+#                 news_lines = "No major headlines available."
+
+#             # Prompt logic based on query_type
+#             if query_type == "price_chart":
+#                 prompt = f"""
+# Act as a financial data analyst. Generate a markdown section showing recent price action for {name} ({symbol}). Include:
+
+# - Volatility patterns (peaks/troughs)
+# - Trend direction (e.g., bullish/bearish)
+# - Notable price movements (from {open_} to {price})
+# - Use time periods and mention if it's trending or consolidating.
+
+# ## Price Movements  
+# Price: ${price}, Open: ${open_}, High: ${high}, Low: ${low}, Previous Close: ${previous_close}  
+# Volume: {volume}  
+# Trend: {trend}
+# """
+#             elif query_type == "recent_news":
+#                 prompt = f"""
+# Act as a financial news summarizer. Provide a markdown list of the most recent headlines for {name} ({symbol}). Highlight important insights and categorize by theme (AI, Cloud, Competition, etc).
+
+# ## Recent News  
+# {news_lines}
+# """
+#             elif query_type == "fundamental_analysis":
+#                 prompt = f"""
+# Act as an expert financial analyst. Provide a full markdown-formatted breakdown of {name} ({symbol}).
+
+# ## Company Overview  
+# **Symbol:** {symbol}  
+# **Company:** {name}  
+# **Price:** ${price}  
+# **Open:** ${open_}  
+# **High:** ${high}  
+# **Low:** ${low}  
+# **Previous Close:** ${previous_close}  
+# **Volume:** {volume}  
+# **Trend:** {trend}  
+# Query Type: {query_type}  
+
+# News Headlines  
+# {news_lines}
+
+# ## Key Financial Metrics  
+# List valuation ratios, margins, ROE, and any known financial KPIs.
+
+# ## Strategic Initiatives  
+# Mention growth areas, innovations, or major company projects.
+
+# ## Upcoming Events  
+# Include earnings dates, estimates, and any financial releases.
+
+# ## Analyst Insights  
+# Summarize bullish/bearish factors, estimates, momentum, and sentiment.
+
+# ## Risks  
+# Highlight major financial, regulatory, or competitive risks.
+# """
+#             else:
+#                 # Default = Trade Idea
+#                 prompt = f"""
+# Act as a professional trader. Based on {name}'s ({symbol}) recent price and news data, suggest a technical trade idea (entry, stop loss, target). Add reasoning using price action and sentiment.
+
+# **Symbol:** {symbol}  
+# **Company:** {name}  
+# **Price:** ${price}  
+# **Open:** ${open_}  
+# **High:** ${high}  
+# **Low:** ${low}  
+# **Previous Close:** ${previous_close}  
+# **Volume:** {volume}  
+# **Trend:** {trend}  
+
+# News Headlines  
+# {news_lines}
+
+# ## Trade Setup  
+# Explain entry strategy, stop-loss and target. Mention chart signals like RSI, MACD, moving averages or support/resistance.
+# """
+
+#             client = OpenAI(
+#                 api_key="sk-fd092005f2f446d78dade7662a13c896",
+#                 base_url="https://api.deepseek.com"
+#             )
+
+#             chat_response = client.chat.completions.create(
+#                 model="deepseek-chat",
+#                 messages=[
+#                     {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 stream=False
+#             )
+
+#             raw = chat_response.choices[0].message.content
+
+#             if not raw.lstrip().lower().startswith("company overview") and query_type == "fundamental_analysis":
+#                 raw = "Company Overview\n\n" + raw
+
+#             cleaned = clean_special_chars(raw)
+
+#             return Response({"message": cleaned})
+
+#         except Exception as e:
+#             logger.error(f"DeepSeek error: {str(e)}")
+#             return Response({"error": str(e)}, status=500)
+
+
+# ///////////////////////////////////////////////////with Streaming ======================
 import re
 import logging
 
+from django.http import StreamingHttpResponse
 from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -526,6 +683,17 @@ def clean_special_chars(text):
     text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)
     return text.strip()
 
+def normalize_query_type(raw):
+    raw = raw.lower().strip()
+    if "price" in raw and "chart" in raw:
+        return "price_chart"
+    elif "news" in raw:
+        return "recent_news"
+    elif "fundamental" in raw or "technical" in raw:
+        return "fundamental_analysis"
+    else:
+        return "default"
+
 @method_decorator(csrf_exempt, name='dispatch')
 class DeepSeekChatView(APIView):
     permission_classes = [AllowAny]
@@ -536,7 +704,7 @@ class DeepSeekChatView(APIView):
 
             symbol = data.get("symbol", "N/A")
             name = data.get("name", "N/A")
-            query_type = data.get("queryType", "default").lower()
+            query_type = normalize_query_type(data.get("queryType", "default"))
             price = data.get("price", "N/A")
             open_ = data.get("open", "N/A")
             high = data.get("high", "N/A")
@@ -556,15 +724,13 @@ class DeepSeekChatView(APIView):
             if not news_lines.strip():
                 news_lines = "No major headlines available."
 
-            # Prompt logic based on query_type
+            # Build prompt
             if query_type == "price_chart":
                 prompt = f"""
 Act as a financial data analyst. Generate a markdown section showing recent price action for {name} ({symbol}). Include:
-
-- Volatility patterns (peaks/troughs)
-- Trend direction (e.g., bullish/bearish)
-- Notable price movements (from {open_} to {price})
-- Use time periods and mention if it's trending or consolidating.
+- Volatility patterns
+- Trend direction
+- Notable price movements
 
 ## Price Movements  
 Price: ${price}, Open: ${open_}, High: ${high}, Low: ${low}, Previous Close: ${previous_close}  
@@ -573,14 +739,14 @@ Trend: {trend}
 """
             elif query_type == "recent_news":
                 prompt = f"""
-Act as a financial news summarizer. Provide a markdown list of the most recent headlines for {name} ({symbol}). Highlight important insights and categorize by theme (AI, Cloud, Competition, etc).
+Act as a financial news summarizer. Provide a markdown list of the most recent headlines for {name} ({symbol}). Highlight insights by theme.
 
 ## Recent News  
 {news_lines}
 """
             elif query_type == "fundamental_analysis":
                 prompt = f"""
-Act as an expert financial analyst. Provide a full markdown-formatted breakdown of {name} ({symbol}).
+Act as an expert financial analyst. Provide a markdown breakdown of {name} ({symbol}).
 
 ## Company Overview  
 **Symbol:** {symbol}  
@@ -592,30 +758,28 @@ Act as an expert financial analyst. Provide a full markdown-formatted breakdown 
 **Previous Close:** ${previous_close}  
 **Volume:** {volume}  
 **Trend:** {trend}  
-Query Type: {query_type}  
 
-News Headlines  
+## News Headlines  
 {news_lines}
 
 ## Key Financial Metrics  
-List valuation ratios, margins, ROE, and any known financial KPIs.
+List valuation ratios, margins, ROE, and KPIs.
 
 ## Strategic Initiatives  
-Mention growth areas, innovations, or major company projects.
+Mention growth areas or major projects.
 
 ## Upcoming Events  
-Include earnings dates, estimates, and any financial releases.
+Include earnings dates and financial releases.
 
 ## Analyst Insights  
-Summarize bullish/bearish factors, estimates, momentum, and sentiment.
+Summarize bullish/bearish sentiment.
 
 ## Risks  
-Highlight major financial, regulatory, or competitive risks.
+Mention major financial or regulatory risks.
 """
             else:
-                # Default = Trade Idea
                 prompt = f"""
-Act as a professional trader. Based on {name}'s ({symbol}) recent price and news data, suggest a technical trade idea (entry, stop loss, target). Add reasoning using price action and sentiment.
+Act as a professional trader. Based on recent price and news data, suggest a technical trade idea for {name} ({symbol}) including entry, stop-loss, target, and reasoning.
 
 **Symbol:** {symbol}  
 **Company:** {name}  
@@ -627,39 +791,41 @@ Act as a professional trader. Based on {name}'s ({symbol}) recent price and news
 **Volume:** {volume}  
 **Trend:** {trend}  
 
-News Headlines  
+## News Headlines  
 {news_lines}
 
 ## Trade Setup  
-Explain entry strategy, stop-loss and target. Mention chart signals like RSI, MACD, moving averages or support/resistance.
+Explain entry, stop-loss, target and technical indicators.
 """
 
+            # Streamed Response
             client = OpenAI(
                 api_key="sk-fd092005f2f446d78dade7662a13c896",
                 base_url="https://api.deepseek.com"
             )
 
-            chat_response = client.chat.completions.create(
+            response = client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
                     {"role": "user", "content": prompt}
                 ],
-                stream=False
+                stream=True
             )
 
-            raw = chat_response.choices[0].message.content
+            def stream():
+                for chunk in response:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        yield content
 
-            if not raw.lstrip().lower().startswith("company overview") and query_type == "fundamental_analysis":
-                raw = "Company Overview\n\n" + raw
-
-            cleaned = clean_special_chars(raw)
-
-            return Response({"message": cleaned})
+            return StreamingHttpResponse(stream(), content_type="text/plain")
 
         except Exception as e:
-            logger.error(f"DeepSeek error: {str(e)}")
+            logger.error(f"Streaming error: {str(e)}")
             return Response({"error": str(e)}, status=500)
+
+
 
 
 # import re
