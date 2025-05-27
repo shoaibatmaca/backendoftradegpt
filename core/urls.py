@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from main.views import *
+from main.views import DeepSeekChatView as DeepSeekChatStreamView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,7 +27,8 @@ urlpatterns = [
     path("api/chat/message-limit/", DailyMessageLimitView.as_view()),
     path("api/proxy/openrouter/", OpenRouterProxyView.as_view()),
     path("api/chat/user/", TradeGPTUserView.as_view()),
-    path("api/deepseek-chat/", DeepSeekChatView.as_view())
+    path("api/deepseek-chat/", DeepSeekChatView.as_view()),
+    path("api/deepseek-chat/stream", DeepSeekChatView.as_view()),  # ✅ NEW for streaming
     
 ]
 
