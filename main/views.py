@@ -818,10 +818,13 @@ Explain entry, stop-loss, target and technical indicators.
                 for chunk in response:
                     content = chunk.choices[0].delta.content
                     if content:
-                        yield content
-                        time.sleep(0.02)
+                        yield f"data: {content}\n\n"  # Correct SSE format
+                        # yield content
+                        # time.sleep(0.02)
 
-            return StreamingHttpResponse(stream(), content_type="text/plain")
+            # return StreamingHttpResponse(stream(), content_type="text/plain")
+            return StreamingHttpResponse(stream(), content_type="text/event-stream")
+
 
         except Exception as e:
             logger.error(f"Streaming error: {str(e)}")
