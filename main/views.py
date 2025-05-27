@@ -526,7 +526,6 @@ class DeepSeekChatView(APIView):
             symbol = data.get("symbol", "N/A")
             name = data.get("name", "N/A")
             query_type = data.get("queryType", "N/A")
-
             price = data.get("price", "N/A")
             open_ = data.get("open", "N/A")
             high = data.get("high", "N/A")
@@ -536,7 +535,6 @@ class DeepSeekChatView(APIView):
             trend = data.get("trend", "N/A")
             news_list = data.get("news", [])
 
-            # Safely build news headlines
             news_lines = ""
             for item in news_list[:5]:
                 headline = item.get("headline", "No headline")
@@ -547,7 +545,6 @@ class DeepSeekChatView(APIView):
             if not news_lines:
                 news_lines = "*No major headlines available.*"
 
-            # Prompt construction
             prompt = f"""
 Act as an expert financial analyst and return your analysis in clear markdown format.
 
@@ -582,20 +579,19 @@ Summarize bullish/bearish factors, estimates, momentum, and sentiment.
 Highlight major financial, regulatory, or competitive risks.
 """
 
-            # Init DeepSeek client (no timeout param here!)
             client = OpenAI(
                 api_key="sk-fd092005f2f446d78dade7662a13c896",
                 base_url="https://api.deepseek.com"
             )
 
-            # Make request (stream=False only!)
+            # Do NOT use timeout or stream
             chat_response = client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
                     {"role": "user", "content": prompt}
                 ],
-                stream=False
+                stream=False  # ✅ keep this off
             )
 
             return Response({
@@ -603,5 +599,5 @@ Highlight major financial, regulatory, or competitive risks.
             })
 
         except Exception as e:
-            logger.error(f"DeepSeek call failed: {str(e)}")
+            logger.error(f"DeepSeek error: {str(e)}")
             return Response({"error": str(e)}, status=500)
