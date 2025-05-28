@@ -680,7 +680,7 @@ def clean_special_chars(text):
     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
     text = re.sub(r'\*(.*?)\*', r'\1', text)
     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
-    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+    # text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
     text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)
     return text.strip()
 
@@ -818,11 +818,12 @@ Explain entry, stop-loss, target and technical indicators.
                 for chunk in response:
                     content = chunk.choices[0].delta.content
                     if content:
-                        yield f"data: {content}\n\n"  # Correct SSE format
-                        # yield content
-                        # time.sleep(0.02)
+                        # yield f"data: {content}\n\n"  # Correct SSE format
+                         # Ensure proper line breaks and spacing
+                        content = content.replace("\n", "\n\n").replace("**", "** ")
+                        yield f"data: {content}\n\n"
+                        
 
-            # return StreamingHttpResponse(stream(), content_type="text/plain")
             return StreamingHttpResponse(stream(), content_type="text/event-stream")
 
 
