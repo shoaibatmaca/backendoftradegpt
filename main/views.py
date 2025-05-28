@@ -676,34 +676,50 @@ import time
 
 logger = logging.getLogger(__name__)
 
+
 # def clean_special_chars(text):
+#     import re
+
+#     # Remove markdown styling (bold, italic, code)
+#     text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)
 #     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
 #     text = re.sub(r'\*(.*?)\*', r'\1', text)
 #     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
-#     # text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-#     text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)
+
+#     # Convert markdown headers (## Section) → "Section:"
+#     text = re.sub(r'^#{1,6}\s*(.+)$', r'\1:', text, flags=re.MULTILINE)
+
+#     # Remove excessive --- or tables like |...|...|
+#     text = re.sub(r'^\|.*?\|$', '', text, flags=re.MULTILINE)  # remove table lines
+#     text = re.sub(r'-{3,}', '\n' + '-'*20 + '\n', text)
+
+#     # Normalize spacing and line breaks
+#     text = re.sub(r'\n{2,}', '\n\n', text)
+#     text = re.sub(r'\s{2,}', ' ', text)
+
 #     return text.strip()
 def clean_special_chars(text):
     import re
 
-    # Remove markdown styling (bold, italic, code)
-    text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-    text = re.sub(r'\*(.*?)\*', r'\1', text)
-    text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
+    # Remove markdown styling
+    text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)  # bold-italic
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)       # bold
+    text = re.sub(r'\*(.*?)\*', r'\1', text)           # italic
+    text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)   # code
 
-    # Convert markdown headers (## Section) → "Section:"
-    text = re.sub(r'^#{1,6}\s*(.+)$', r'\1:', text, flags=re.MULTILINE)
+    # Replace headings (## Heading) with properly formatted section titles
+    text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n### \1\n', text, flags=re.MULTILINE)
 
-    # Remove excessive --- or tables like |...|...|
-    text = re.sub(r'^\|.*?\|$', '', text, flags=re.MULTILINE)  # remove table lines
-    text = re.sub(r'-{3,}', '\n' + '-'*20 + '\n', text)
+    # Remove markdown tables and separators
+    text = re.sub(r'\|.*?\|', '', text)         # remove markdown table rows
+    text = re.sub(r'-{3,}', '\n' + '-'*20 + '\n', text)  # normalize separators
 
-    # Normalize spacing and line breaks
+    # Normalize spacing
     text = re.sub(r'\n{2,}', '\n\n', text)
     text = re.sub(r'\s{2,}', ' ', text)
 
     return text.strip()
+
 
 
 def normalize_query_type(raw):
