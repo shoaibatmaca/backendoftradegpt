@@ -676,13 +676,35 @@ import time
 
 logger = logging.getLogger(__name__)
 
+# def clean_special_chars(text):
+#     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+#     text = re.sub(r'\*(.*?)\*', r'\1', text)
+#     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
+#     # text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+#     text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)
+#     return text.strip()
 def clean_special_chars(text):
+    import re
+
+    # Remove markdown styling (bold, italic, code)
+    text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)
     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
     text = re.sub(r'\*(.*?)\*', r'\1', text)
     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
-    # text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-    text = re.sub(r'[\u2600-\u26FF\u2700-\u27BF\uE000-\uF8FF]', '', text)
+
+    # Convert markdown headers (## Section) → "Section:"
+    text = re.sub(r'^#{1,6}\s*(.+)$', r'\1:', text, flags=re.MULTILINE)
+
+    # Remove excessive --- or tables like |...|...|
+    text = re.sub(r'^\|.*?\|$', '', text, flags=re.MULTILINE)  # remove table lines
+    text = re.sub(r'-{3,}', '\n' + '-'*20 + '\n', text)
+
+    # Normalize spacing and line breaks
+    text = re.sub(r'\n{2,}', '\n\n', text)
+    text = re.sub(r'\s{2,}', ' ', text)
+
     return text.strip()
+
 
 def normalize_query_type(raw):
     raw = raw.lower().strip()
@@ -820,7 +842,9 @@ Explain entry, stop-loss, target and technical indicators.
                     if content:
                         # yield f"data: {content}\n\n"  # Correct SSE format
                          # Ensure proper line breaks and spacing
-                        content = content.replace("\n", "\n\n").replace("**", "** ")
+                        # content = content.replace("\n", "\n\n").replace("**", "** ")
+                        content = clean_special_chars(content)
+
                         yield f"data: {content}\n\n"
                         
 
