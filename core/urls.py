@@ -25,7 +25,6 @@ urlpatterns = [
     path("api/chat/sessions/<uuid:session_id>/messages/", MessageListCreateView.as_view()),
     path("api/chat/user-sessions/", UserChatSessionsView.as_view()),
     path("api/chat/message-limit/", DailyMessageLimitView.as_view()),
-    path("api/proxy/openrouter/", OpenRouterProxyView.as_view()),
     path("api/chat/user/", TradeGPTUserView.as_view()),
     path("api/deepseek-chat/", DeepSeekChatView.as_view()),
     path("api/deepseek-chat/stream", DeepSeekChatView.as_view()),  # ✅ NEW for streaming
