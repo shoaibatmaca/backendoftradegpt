@@ -43,6 +43,7 @@ ALLOWED_HOSTS = [
     "*",
     "valourwealthdjango-production.up.railway.app",
     "https://frontend-eight-rho-95.vercel.app", 
+    'https://backendoftradegpt-production.up.railway.app'
 ]
 
 # Application definition
