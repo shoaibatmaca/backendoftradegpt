@@ -165,6 +165,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://frontend-eight-rho-95.vercel.app",
     "https://valourwealthy.vercel.app",
     "https://valourwealthdjango-production.up.railway.app",
+    "https://backendoftradegpt-production.up.railway.app/",
     "http://127.0.0.1:8000",
     "https://192.168.1.12:3000",
 ]
