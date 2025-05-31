@@ -140,63 +140,253 @@ import requests
 
 
 
-import re
-import logging
+# import re
+# import logging
 
-from django.http import StreamingHttpResponse
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from openai import OpenAI
-import time
+# from django.http import StreamingHttpResponse
+# from rest_framework.views import APIView
+# from rest_framework.permissions import AllowAny
+# from django.views.decorators.csrf import csrf_exempt
+# from django.utils.decorators import method_decorator
+# from openai import OpenAI
+# import time
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
+# # def clean_special_chars(text):
+# #     import re
+
+# #     # Remove markdown styling (bold, italic, code)
+# #     text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)
+# #     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+# #     text = re.sub(r'\*(.*?)\*', r'\1', text)
+# #     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
+
+# #     # Convert markdown headers (## Section) → "Section:"
+# #     text = re.sub(r'^#{1,6}\s*(.+)$', r'\1:', text, flags=re.MULTILINE)
+
+# #     # Remove excessive --- or tables like |...|...|
+# #     text = re.sub(r'^\|.*?\|$', '', text, flags=re.MULTILINE)  # remove table lines
+# #     text = re.sub(r'-{3,}', '\n' + '-'*20 + '\n', text)
+
+# #     # Normalize spacing and line breaks
+# #     text = re.sub(r'\n{2,}', '\n\n', text)
+# #     text = re.sub(r'\s{2,}', ' ', text)
+
+# #     return text.strip()
 # def clean_special_chars(text):
 #     import re
 
-#     # Remove markdown styling (bold, italic, code)
-#     text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)
-#     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-#     text = re.sub(r'\*(.*?)\*', r'\1', text)
-#     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
+#     # Remove markdown styling
+#     text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)  # bold-italic
+#     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)       # bold
+#     text = re.sub(r'\*(.*?)\*', r'\1', text)           # italic
+#     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)   # code
 
-#     # Convert markdown headers (## Section) → "Section:"
-#     text = re.sub(r'^#{1,6}\s*(.+)$', r'\1:', text, flags=re.MULTILINE)
+#     # Replace headings (## Heading) with properly formatted section titles
+#     text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n### \1\n', text, flags=re.MULTILINE)
 
-#     # Remove excessive --- or tables like |...|...|
-#     text = re.sub(r'^\|.*?\|$', '', text, flags=re.MULTILINE)  # remove table lines
-#     text = re.sub(r'-{3,}', '\n' + '-'*20 + '\n', text)
+#     # Remove markdown tables and separators
+#     text = re.sub(r'\|.*?\|', '', text)         # remove markdown table rows
+#     text = re.sub(r'-{3,}', '\n' + '-'*20 + '\n', text)  # normalize separators
 
-#     # Normalize spacing and line breaks
+#     # Normalize spacing
 #     text = re.sub(r'\n{2,}', '\n\n', text)
 #     text = re.sub(r'\s{2,}', ' ', text)
 
 #     return text.strip()
-def clean_special_chars(text):
-    import re
 
+
+
+# def normalize_query_type(raw):
+#     raw = raw.lower().strip()
+#     if "price" in raw and "chart" in raw:
+#         return "price_chart"
+#     elif "news" in raw:
+#         return "recent_news"
+#     elif "fundamental" in raw or "technical" in raw:
+#         return "fundamental_analysis"
+#     else:
+#         return "default"
+
+# @method_decorator(csrf_exempt, name='dispatch')
+# class DeepSeekChatView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         try:
+#             data = request.data
+
+#             symbol = data.get("symbol", "N/A")
+#             name = data.get("name", "N/A")
+#             query_type = normalize_query_type(data.get("queryType", "default"))
+#             price = data.get("price", "N/A")
+#             open_ = data.get("open", "N/A")
+#             high = data.get("high", "N/A")
+#             low = data.get("low", "N/A")
+#             previous_close = data.get("previousClose", "N/A")
+#             volume = data.get("volume", "N/A")
+#             trend = data.get("trend", "N/A")
+#             news_list = data.get("news", [])
+
+#             news_lines = ""
+#             for item in news_list[:5]:
+#                 headline = item.get("headline", "No headline")
+#                 time_str = item.get("time", "Unknown time")
+#                 category = item.get("category", "General")
+#                 news_lines += f"- {headline} at {time_str} | {category}\n"
+
+#             if not news_lines.strip():
+#                 news_lines = "No major headlines available."
+
+#             # Build prompt
+#             if query_type == "price_chart":
+#                 prompt = f"""
+# Act as a financial data analyst. Generate a markdown section showing recent price action for {name} ({symbol}). Include:
+# - Volatility patterns
+# - Trend direction
+# - Notable price movements
+
+# ## Price Movements  
+# Price: ${price}, Open: ${open_}, High: ${high}, Low: ${low}, Previous Close: ${previous_close}  
+# Volume: {volume}  
+# Trend: {trend}
+# """
+#             elif query_type == "recent_news":
+#                 prompt = f"""
+# Act as a financial news summarizer. Provide a markdown list of the most recent headlines for {name} ({symbol}). Highlight insights by theme.
+
+# ## Recent News  
+# {news_lines}
+# """
+#             elif query_type == "fundamental_analysis":
+#                 prompt = f"""
+# Act as an expert financial analyst. Provide a markdown breakdown of {name} ({symbol}).
+
+# ## Company Overview  
+# **Symbol:** {symbol}  
+# **Company:** {name}  
+# **Price:** ${price}  
+# **Open:** ${open_}  
+# **High:** ${high}  
+# **Low:** ${low}  
+# **Previous Close:** ${previous_close}  
+# **Volume:** {volume}  
+# **Trend:** {trend}  
+
+# ## News Headlines  
+# {news_lines}
+
+# ## Key Financial Metrics  
+# List valuation ratios, margins, ROE, and KPIs.
+
+# ## Strategic Initiatives  
+# Mention growth areas or major projects.
+
+# ## Upcoming Events  
+# Include earnings dates and financial releases.
+
+# ## Analyst Insights  
+# Summarize bullish/bearish sentiment.
+
+# ## Risks  
+# Mention major financial or regulatory risks.
+# """
+#             else:
+#                 prompt = f"""
+# Act as a professional trader. Based on recent price and news data, suggest a technical trade idea for {name} ({symbol}) including entry, stop-loss, target, and reasoning.
+
+# **Symbol:** {symbol}  
+# **Company:** {name}  
+# **Price:** ${price}  
+# **Open:** ${open_}  
+# **High:** ${high}  
+# **Low:** ${low}  
+# **Previous Close:** ${previous_close}  
+# **Volume:** {volume}  
+# **Trend:** {trend}  
+
+# ## News Headlines  
+# {news_lines}
+
+# ## Trade Setup  
+# Explain entry, stop-loss, target and technical indicators.
+# """
+
+#             # Streamed Response
+#             client = OpenAI(
+#                 api_key="sk-fd092005f2f446d78dade7662a13c896",
+#                 base_url="https://api.deepseek.com"
+#             )
+
+#             response = client.chat.completions.create(
+#                 model="deepseek-chat",
+#                 messages=[
+#                     {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 stream=True
+#             )
+
+#             def stream():
+#                 for chunk in response:
+#                     content = chunk.choices[0].delta.content
+#                     if content:
+#                         # yield f"data: {content}\n\n"  # Correct SSE format
+#                          # Ensure proper line breaks and spacing
+#                         # content = content.replace("\n", "\n\n").replace("**", "** ")
+#                         content = clean_special_chars(content)
+
+#                         yield f"data: {content}\n\n"
+                        
+
+#             return StreamingHttpResponse(stream(), content_type="text/event-stream")
+
+
+#         except Exception as e:
+#             logger.error(f"Streaming error: {str(e)}")
+#             return Response({"error": str(e)}, status=500)
+
+
+
+
+
+
+import re
+import logging
+import time
+
+from django.http import StreamingHttpResponse
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from openai import OpenAI
+
+logger = logging.getLogger(__name__)
+
+
+def clean_special_chars(text):
     # Remove markdown styling
-    text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)  # bold-italic
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)       # bold
-    text = re.sub(r'\*(.*?)\*', r'\1', text)           # italic
-    text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)   # code
+    text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+    text = re.sub(r'\*(.*?)\*', r'\1', text)
+    text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
 
     # Replace headings (## Heading) with properly formatted section titles
     text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n### \1\n', text, flags=re.MULTILINE)
 
     # Remove markdown tables and separators
-    text = re.sub(r'\|.*?\|', '', text)         # remove markdown table rows
-    text = re.sub(r'-{3,}', '\n' + '-'*20 + '\n', text)  # normalize separators
+    text = re.sub(r'\|.*?\|', '', text)  # remove markdown table rows
+    text = re.sub(r'-{3,}', '\n' + '-' * 20 + '\n', text)
 
     # Normalize spacing
     text = re.sub(r'\n{2,}', '\n\n', text)
     text = re.sub(r'\s{2,}', ' ', text)
 
     return text.strip()
-
 
 
 def normalize_query_type(raw):
@@ -209,6 +399,7 @@ def normalize_query_type(raw):
         return "fundamental_analysis"
     else:
         return "default"
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class DeepSeekChatView(APIView):
@@ -314,38 +505,31 @@ Act as a professional trader. Based on recent price and news data, suggest a tec
 Explain entry, stop-loss, target and technical indicators.
 """
 
-            # Streamed Response
+            # Initialize client
             client = OpenAI(
                 api_key="sk-fd092005f2f446d78dade7662a13c896",
                 base_url="https://api.deepseek.com"
             )
 
+            # Generate response (with token limit)
             response = client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": "You are TradeGPT, a professional market analyst."},
                     {"role": "user", "content": prompt}
                 ],
-                stream=True
+                stream=True,
+                max_tokens=500
             )
 
             def stream():
                 for chunk in response:
                     content = chunk.choices[0].delta.content
                     if content:
-                        # yield f"data: {content}\n\n"  # Correct SSE format
-                         # Ensure proper line breaks and spacing
-                        # content = content.replace("\n", "\n\n").replace("**", "** ")
-                        content = clean_special_chars(content)
-
-                        yield f"data: {content}\n\n"
-                        
+                        yield f"data: {clean_special_chars(content)}\n\n"
 
             return StreamingHttpResponse(stream(), content_type="text/event-stream")
-
 
         except Exception as e:
             logger.error(f"Streaming error: {str(e)}")
             return Response({"error": str(e)}, status=500)
-
-
