@@ -484,9 +484,30 @@ Summarize bullish/bearish sentiment.
 ## Risks  
 Mention major financial or regulatory risks.
 """
+#             else:
+#                 prompt = f"""
+# Act as a professional trader. Based on recent price and news data, suggest a technical trade idea for {name} ({symbol}) including entry, stop-loss, target, and reasoning.
+
+# **Symbol:** {symbol}  
+# **Company:** {name}  
+# **Price:** ${price}  
+# **Open:** ${open_}  
+# **High:** ${high}  
+# **Low:** ${low}  
+# **Previous Close:** ${previous_close}  
+# **Volume:** {volume}  
+# **Trend:** {trend}  
+
+# ## News Headlines  
+# {news_lines}
+
+# ## Trade Setup  
+# Explain entry, stop-loss, target and technical indicators.
+# """
+
             else:
-                prompt = f"""
-Act as a professional trader. Based on recent price and news data, suggest a technical trade idea for {name} ({symbol}) including entry, stop-loss, target, and reasoning.
+                    prompt = f"""
+Act as a senior technical analyst and trader. Provide a detailed markdown-based trade setup for {name} ({symbol}) based on the latest market data and headlines. Ensure that all sections below are filled with actionable insights.
 
 **Symbol:** {symbol}  
 **Company:** {name}  
@@ -502,7 +523,26 @@ Act as a professional trader. Based on recent price and news data, suggest a tec
 {news_lines}
 
 ## Trade Setup  
-Explain entry, stop-loss, target and technical indicators.
+Explain entry price, stop-loss, target price, and supporting technical indicators like RSI, MACD, volume trend, support/resistance, or moving averages. Mention any candlestick patterns if relevant.
+
+## Key Financial Metrics (Trailing Twelve Months)  
+Include EPS, Gross Margin, Net Margin, Operating Margin, P/E, P/B, P/S, ROA, ROE, Debt/Equity, and Current Ratio. Compare to sector medians if possible.
+
+## Upcoming Events  
+Mention scheduled earnings, economic data releases, product launches, or market-moving events that could affect the stock.
+
+## Analyst Insights  
+Summarize valuation stance, growth potential, profitability strengths, and momentum. Include any recent earnings revisions or institutional commentary.
+
+## Competitors  
+List 2–3 direct competitors. Mention Amazon/Google/Microsoft-type peers and what differentiates this company.
+
+## Unique Value Proposition  
+Describe what makes this company valuable long-term — e.g., technology leadership, distribution advantage, IP, customer base, etc.
+
+## Buy and Sell Reasons  
+- **Buy:** List technical and fundamental reasons to enter a long trade now.  
+- **Sell:** List risks such as weakening earnings, competition, valuation concerns, or macro trends.
 """
 
             # Initialize client
