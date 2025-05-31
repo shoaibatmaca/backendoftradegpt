@@ -591,84 +591,16 @@ Describe what makes this company valuable long-term — e.g., technology leaders
 
 # ===============================================================================
 # # direct chat 
-# @method_decorator(csrf_exempt, name='dispatch')
-# class DirectChatAIView(APIView):
-#     permission_classes = [AllowAny]
-
-#     def post(self, request):
-#         try:
-#             message = request.data.get("message", "").strip()
-#             if not message:
-#                 return Response({"error": "Message is required."}, status=400)
-
-#             prompt = f"""
-# You are TradeGPT, a professional market analyst and assistant. Respond clearly in markdown format and provide complete explanations.
-
-# User: {message}
-# """
-
-#             client = OpenAI(
-#                 api_key="sk-fd092005f2f446d78dade7662a13c896",
-#                 base_url="https://api.deepseek.com"
-#             )
-
-#             response = client.chat.completions.create(
-#                 model="deepseek-chat",
-#                 messages=[
-#                     {"role": "system", "content": "You are TradeGPT, a helpful financial assistant."},
-#                     {"role": "user", "content": prompt}
-#                 ],
-#                 stream=True,
-#                 max_tokens=1200
-#             )
-
-#             def stream():
-#                 for chunk in response:
-#                     content = chunk.choices[0].delta.content
-#                     if content:
-#                         yield f"data: {clean_special_chars(content)}\n\n"
-
-#             return StreamingHttpResponse(stream(), content_type="text/event-stream")
-
-#         except Exception as e:
-#             logger.error(f"Direct chat error: {str(e)}")
-#             return Response({"error": str(e)}, status=500)
-# ===============================================================================
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class DirectChatAIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         try:
-            token = request.GET.get("token")
-            user = get_user_from_token(token)
-
             message = request.data.get("message", "").strip()
-            session_id = request.data.get("session_id")
-
             if not message:
                 return Response({"error": "Message is required."}, status=400)
 
-            # Create or fetch session
-            if not session_id:
-                session = ChatSession.objects.create(
-                    session_id=uuid.uuid4(),
-                    user_id=user["user_id"],
-                    username=user["username"]
-                )
-            else:
-                session = ChatSession.objects.get(session_id=session_id)
-
-            # Save user message
-            ChatMessage.objects.create(
-                session=session,
-                role="user",
-                content=message
-            )
-
-            # Build AI prompt
             prompt = f"""
 You are TradeGPT, a professional market analyst and assistant. Respond clearly in markdown format and provide complete explanations.
 
@@ -687,34 +619,102 @@ User: {message}
                     {"role": "user", "content": prompt}
                 ],
                 stream=True,
-                max_tokens=1500
+                max_tokens=1200
             )
-
-            # Stream AI response and collect full reply
-            full_ai_reply = []
 
             def stream():
                 for chunk in response:
                     content = chunk.choices[0].delta.content
                     if content:
-                        full_ai_reply.append(content)
                         yield f"data: {clean_special_chars(content)}\n\n"
 
-            def save_ai_response():
-                ChatMessage.objects.create(
-                    session=session,
-                    role="ai",
-                    content="".join(full_ai_reply)
-                )
-
-            # Return stream and save AI response after completion
-            resp = StreamingHttpResponse(stream(), content_type="text/event-stream")
-            resp.streaming_content = iter(list(stream()))
-            save_ai_response()
-            return resp
+            return StreamingHttpResponse(stream(), content_type="text/event-stream")
 
         except Exception as e:
             logger.error(f"Direct chat error: {str(e)}")
             return Response({"error": str(e)}, status=500)
+# ===============================================================================
+
+
+# @method_decorator(csrf_exempt, name='dispatch')
+# class DirectChatAIView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         try:
+#             token = request.GET.get("token")
+#             user = get_user_from_token(token)
+
+#             message = request.data.get("message", "").strip()
+#             session_id = request.data.get("session_id")
+
+#             if not message:
+#                 return Response({"error": "Message is required."}, status=400)
+
+#             # Create or fetch session
+#             if not session_id:
+#                 session = ChatSession.objects.create(
+#                     session_id=uuid.uuid4(),
+#                     user_id=user["user_id"],
+#                     username=user["username"]
+#                 )
+#             else:
+#                 session = ChatSession.objects.get(session_id=session_id)
+
+#             # Save user message
+#             ChatMessage.objects.create(
+#                 session=session,
+#                 role="user",
+#                 content=message
+#             )
+
+#             # Build AI prompt
+#             prompt = f"""
+# You are TradeGPT, a professional market analyst and assistant. Respond clearly in markdown format and provide complete explanations.
+
+# User: {message}
+# """
+
+#             client = OpenAI(
+#                 api_key="sk-fd092005f2f446d78dade7662a13c896",
+#                 base_url="https://api.deepseek.com"
+#             )
+
+#             response = client.chat.completions.create(
+#                 model="deepseek-chat",
+#                 messages=[
+#                     {"role": "system", "content": "You are TradeGPT, a helpful financial assistant."},
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 stream=True,
+#                 max_tokens=1500
+#             )
+
+#             # Stream AI response and collect full reply
+#             full_ai_reply = []
+
+#             def stream():
+#                 for chunk in response:
+#                     content = chunk.choices[0].delta.content
+#                     if content:
+#                         full_ai_reply.append(content)
+#                         yield f"data: {clean_special_chars(content)}\n\n"
+
+#             def save_ai_response():
+#                 ChatMessage.objects.create(
+#                     session=session,
+#                     role="ai",
+#                     content="".join(full_ai_reply)
+#                 )
+
+#             # Return stream and save AI response after completion
+#             resp = StreamingHttpResponse(stream(), content_type="text/event-stream")
+#             resp.streaming_content = iter(list(stream()))
+#             save_ai_response()
+#             return resp
+
+#         except Exception as e:
+#             logger.error(f"Direct chat error: {str(e)}")
+#             return Response({"error": str(e)}, status=500)
 
 
