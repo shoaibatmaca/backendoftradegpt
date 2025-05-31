@@ -455,7 +455,7 @@ Act as a financial news summarizer. Provide a markdown list of the most recent h
 """
             elif query_type == "fundamental_analysis":
                 prompt = f"""
-Act as an expert financial analyst. Provide a markdown breakdown of {name} ({symbol}).
+Act as an expert financial analyst. Provide a detailed markdown breakdown of {name} ({symbol}).
 
 ## Company Overview  
 **Symbol:** {symbol}  
@@ -483,6 +483,18 @@ Include earnings dates and financial releases.
 ## Analyst Insights  
 Summarize bullish/bearish sentiment.
 
+## Industry Trends  
+Discuss broader sector or industry movements that may influence this stock. Include trends such as economic indicators, Fed policies, sector performance, or geopolitical factors. For example:  
+- Technology sector resilience  
+- Fed interest rate outlook  
+- Inflation and consumer demand  
+- Global supply chain effects
+
+
+## Buy and Sell Reasons  
+- **Buy:** List technical and fundamental reasons to enter a long trade now.  
+- **Sell:** List risks such as weakening earnings, competition, valuation concerns, or macro trends.
+
 ## Risks  
 Mention major financial or regulatory risks.
 """
@@ -509,7 +521,7 @@ Mention major financial or regulatory risks.
 
             else:
                     prompt = f"""
-Act as a senior technical analyst and trader. Provide a detailed markdown-based trade setup for {name} ({symbol}) based on the latest market data and headlines. Ensure that all sections below are filled with actionable insights.
+Act as a senior technical analyst and trader. Provide a detailed markdown-based trade ideas valour setup for {name} ({symbol}) based on the latest market data and headlines. Ensure that all sections below are filled with actionable insights.
 
 **Symbol:** {symbol}  
 **Company:** {name}  
@@ -524,7 +536,7 @@ Act as a senior technical analyst and trader. Provide a detailed markdown-based 
 ## News Headlines  
 {news_lines}
 
-## Trade Setup  
+## Trade Ideas setup by valourGpt  
 Explain entry price, stop-loss, target price, and supporting technical indicators like RSI, MACD, volume trend, support/resistance, or moving averages. Mention any candlestick patterns if relevant.
 
 ## Key Financial Metrics (Trailing Twelve Months)  
