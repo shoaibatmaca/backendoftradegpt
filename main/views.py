@@ -404,6 +404,7 @@ def normalize_query_type(raw):
 @method_decorator(csrf_exempt, name='dispatch')
 class DeepSeekChatView(APIView):
     permission_classes = [AllowAny]
+    
 
     def post(self, request):
         try:
@@ -421,6 +422,7 @@ class DeepSeekChatView(APIView):
             trend = data.get("trend", "N/A")
             news_list = data.get("news", [])
 
+            MAX_TOKENS = min(max(int(data.get("tokenLimit", 1500)), 1), 8192)
             news_lines = ""
             for item in news_list[:5]:
                 headline = item.get("headline", "No headline")
@@ -559,7 +561,8 @@ Describe what makes this company valuable long-term — e.g., technology leaders
                     {"role": "user", "content": prompt}
                 ],
                 stream=True,
-                max_tokens=10000
+                
+                max_tokens=MAX_TOKENS
             )
 
             def stream():
