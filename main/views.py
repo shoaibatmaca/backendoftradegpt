@@ -559,7 +559,7 @@ Describe what makes this company valuable long-term — e.g., technology leaders
                     {"role": "user", "content": prompt}
                 ],
                 stream=True,
-                max_tokens=700
+                max_tokens=10000
             )
 
             def stream():
