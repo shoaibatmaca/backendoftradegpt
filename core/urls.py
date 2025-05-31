@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import path
 from main.views import *
 from main.views import DeepSeekChatView as DeepSeekChatStreamView
+from main.views import DirectChatAIView
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,6 +30,8 @@ urlpatterns = [
     path("api/chat/user/", TradeGPTUserView.as_view()),
     path("api/deepseek-chat/", DeepSeekChatView.as_view()),
     path("api/deepseek-chat/stream", DeepSeekChatView.as_view()),  # ✅ NEW for streaming
+    # for direct user chat 
+     path("api/deepseek-chat/direct/", DirectChatAIView.as_view(), name="deepseek-direct-chat"),
     
 ]
 

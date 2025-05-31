@@ -490,7 +490,6 @@ Discuss broader sector or industry movements that may influence this stock. Incl
 - Inflation and consumer demand  
 - Global supply chain effects
 
-
 ## Buy and Sell Reasons  
 - **Buy:** List technical and fundamental reasons to enter a long trade now.  
 - **Sell:** List risks such as weakening earnings, competition, valuation concerns, or macro trends.
@@ -587,4 +586,50 @@ Describe what makes this company valuable long-term — e.g., technology leaders
 
         except Exception as e:
             logger.error(f"Streaming error: {str(e)}")
+            return Response({"error": str(e)}, status=500)
+
+
+
+# direct chat 
+@method_decorator(csrf_exempt, name='dispatch')
+class DirectChatAIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            message = request.data.get("message", "").strip()
+            if not message:
+                return Response({"error": "Message is required."}, status=400)
+
+            prompt = f"""
+You are TradeGPT, a professional market analyst and assistant. Respond clearly in markdown format and provide complete explanations.
+
+User: {message}
+"""
+
+            client = OpenAI(
+                api_key="sk-fd092005f2f446d78dade7662a13c896",
+                base_url="https://api.deepseek.com"
+            )
+
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": "You are TradeGPT, a helpful financial assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                stream=True,
+                max_tokens=1200
+            )
+
+            def stream():
+                for chunk in response:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        yield f"data: {clean_special_chars(content)}\n\n"
+
+            return StreamingHttpResponse(stream(), content_type="text/event-stream")
+
+        except Exception as e:
+            logger.error(f"Direct chat error: {str(e)}")
             return Response({"error": str(e)}, status=500)
