@@ -399,6 +399,12 @@ def clean_special_chars(text):
     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
     text = re.sub(r'\*(.*?)\*', r'\1', text)
     text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)
+    # Remove markdown headings like ### 1. Tesla (TSLA) → just "1. Tesla (TSLA)"
+    text = re.sub(r'^#{1,6}\s*(\d+\.\s?[A-Z].+)', r'\1', text, flags=re.MULTILINE)
+
+# For all other headings, you can still keep optional formatting (or remove this too)
+    text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n\1\n', text, flags=re.MULTILINE)
+
 
     # Replace headings (## Heading) with properly formatted section titles
     text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n### \1\n', text, flags=re.MULTILINE)
