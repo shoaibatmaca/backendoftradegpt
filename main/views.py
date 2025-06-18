@@ -70,14 +70,14 @@ class StartChatSessionView(APIView):
 
         if existing_session:
             return Response({"session_id": existing_session.session_id})
+        else:
+            session = ChatSession.objects.create(
+                session_id=uuid.uuid4(),
+                user_id=user["user_id"],
+                username=user["username"],
+            )
+            return Response({"session_id": session.session_id})
 
-         # ✅ Else create new
-        session = ChatSession.objects.create(
-            session_id=uuid.uuid4(),
-             user_id=user["user_id"],
-             username=user["username"],
-         )
-        return Response({"session_id": session.session_id})
 
 
     # def post(self, request):
