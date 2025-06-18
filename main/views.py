@@ -11,6 +11,7 @@ from .models import ChatSession, ChatMessage
 from .utils import get_user_from_token
 from django.utils.timezone import now
 import uuid
+from django.utils import timezone
 
 
 class TradeGPTUserView(APIView):
@@ -54,17 +55,41 @@ class StartChatSessionView(APIView):
             username=user["username"],
         )
         return Response({"session_id": session.session_id})
-
+    
+    # Replace POST method with this logic:
     def post(self, request):
         token = request.GET.get("token")
         user = get_user_from_token(token)
 
+        # ✅ Check if session for today already exists
+        today = timezone.now().date()
+        existing_session = ChatSession.objects.filter(
+            user_id=user["user_id"],
+            created_at__date=today
+        ).first()
+
+        if existing_session:
+            return Response({"session_id": existing_session.session_id})
+
+         # ✅ Else create new
         session = ChatSession.objects.create(
             session_id=uuid.uuid4(),
-            user_id=user["user_id"],
-            username=user["username"],
-        )
+             user_id=user["user_id"],
+             username=user["username"],
+         )
         return Response({"session_id": session.session_id})
+
+
+    # def post(self, request):
+    #     token = request.GET.get("token")
+    #     user = get_user_from_token(token)
+
+    #     session = ChatSession.objects.create(
+    #         session_id=uuid.uuid4(),
+    #         user_id=user["user_id"],
+    #         username=user["username"],
+    #     )
+    #     return Response({"session_id": session.session_id})
 
 
 class MessageListCreateView(APIView):
