@@ -1064,27 +1064,45 @@ from openai import OpenAI
 logger = logging.getLogger(__name__)
 
 
+# def clean_special_chars(text):
+#     # Remove markdown styling
+    
+#     text = re.sub(r'\\\((.*?)\\\*\)', r'\1', text) 
+#     text = re.sub(r'\\(.?)\\*', r'\1', text)
+#     text = re.sub(r'\(.?)\*', r'\1', text)
+#     text = re.sub(r'{1,3}(.*?){1,3}', r'\1', text)
+#     # Remove markdown headings like ### 1. Tesla (TSLA) → just "1. Tesla (TSLA)"
+#     text = re.sub(r'^#{1,6}\s*(\d+\.\s?[A-Z].+)', r'\1', text, flags=re.MULTILINE)
+
+# # For all other headings, you can still keep optional formatting (or remove this too)
+#     text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n\1\n', text, flags=re.MULTILINE)
+
+
+#     # Replace headings (## Heading) with properly formatted section titles
+#     text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n### \1\n', text, flags=re.MULTILINE)
+
+#     # Remove markdown tables and separators
+#     text = re.sub(r'\|.*?\|', '', text)  # remove markdown table rows
+#     text = re.sub(r'-{3,}', '\n' + '-' * 20 + '\n', text)
+
+#     # Normalize spacing
+#     text = re.sub(r'\n{2,}', '\n\n', text)
+#     text = re.sub(r'\s{2,}', ' ', text)
+
+#     return text.strip()
+
 def clean_special_chars(text):
-    # Remove markdown styling
-    text = re.sub(r'\\\(.?)\\\*', r'\1', text)
-    text = re.sub(r'\\(.?)\\*', r'\1', text)
-    text = re.sub(r'\(.?)\*', r'\1', text)
-    text = re.sub(r'{1,3}(.*?){1,3}', r'\1', text)
-    # Remove markdown headings like ### 1. Tesla (TSLA) → just "1. Tesla (TSLA)"
+    # Fix malformed regex patterns
+    text = re.sub(r'\\\((.*?)\\\*\)', r'\1', text)  # e.g., \(something\*) → something
+    text = re.sub(r'\\(.)', r'\1', text)            # remove escaped single chars
+    text = re.sub(r'\*{1,3}(.*?)\*{1,3}', r'\1', text)  # bold/italic markdown
+
     text = re.sub(r'^#{1,6}\s*(\d+\.\s?[A-Z].+)', r'\1', text, flags=re.MULTILINE)
-
-# For all other headings, you can still keep optional formatting (or remove this too)
-    text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n\1\n', text, flags=re.MULTILINE)
-
-
-    # Replace headings (## Heading) with properly formatted section titles
     text = re.sub(r'^#{1,6}\s*(.+)$', r'\n\n### \1\n', text, flags=re.MULTILINE)
 
-    # Remove markdown tables and separators
-    text = re.sub(r'\|.*?\|', '', text)  # remove markdown table rows
+    text = re.sub(r'\|.*?\|', '', text)
     text = re.sub(r'-{3,}', '\n' + '-' * 20 + '\n', text)
 
-    # Normalize spacing
     text = re.sub(r'\n{2,}', '\n\n', text)
     text = re.sub(r'\s{2,}', ' ', text)
 
@@ -1284,7 +1302,10 @@ Describe what makes this company valuable long-term — e.g., technology leaders
                     if content:
                         yield f"data: {clean_special_chars(content)}\n\n"
 
-            return StreamingHttpResponse(stream(), content_type="text/event-stream")
+            # return StreamingHttpResponse(stream(), content_type="text/event-stream")
+            response = StreamingHttpResponse(stream(), content_type="text/event-stream")
+            return add_cors_headers(response)
+
 
         except Exception as e:
             logger.error(f"Streaming error: {str(e)}")
@@ -1303,14 +1324,20 @@ import logging
 import json
 
 # logger = logging.getLogger(_name_)
-
 def add_cors_headers(response):
-    """Add CORS headers to response"""
     response["Access-Control-Allow-Origin"] = "*"
     response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     response["Access-Control-Max-Age"] = "86400"
     return response
+
+# def add_cors_headers(response):
+#     """Add CORS headers to response"""
+#     response["Access-Control-Allow-Origin"] = "*"
+#     response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+#     response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+#     response["Access-Control-Max-Age"] = "86400"
+#     return response
 
 @method_decorator(csrf_exempt, name='dispatch')
 class DirectChatAIView(APIView):
