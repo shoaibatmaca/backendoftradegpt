@@ -1061,7 +1061,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from openai import OpenAI
 
-logger = logging.getLogger(_name_)
+logger = logging.getLogger(__name__)
 
 
 def clean_special_chars(text):
